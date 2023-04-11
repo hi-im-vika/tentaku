@@ -1,0 +1,7 @@
+-isystem/opt/homebrew/Cellar/avr-gcc@9/9.4.0/avr/include
+-D__AVR_ATmega328P__
+-Wall
+-Os
+-std=c99
+-DF_CPU=8000000
+-mmcu=atmega328p
