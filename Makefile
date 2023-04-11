@@ -7,8 +7,13 @@ MCU=atmega328p
 CPUFREQ=8000000
 DEVINFO=-DF_CPU=$(CPUFREQ) -mmcu=$(MCU)
 
+BUILDDIR=./build
+SRCDIR=./src
+
 all:
+	# make build folder if it doesn't exist already
+	@mkdir -p ./build
 	@printf " $(BANNER)\n"
-	avr-gcc $(WARN) $(OPT) $(DEVINFO) -c src/main.c -o build/main.o
-	avr-gcc $(WARN) $(DEVINFO) -o build/main.elf build/main.o
-	avr-objcopy -O ihex build/main.elf build/main.hex
+	avr-gcc $(WARN) $(OPT) $(DEVINFO) -c $(SRCDIR)/main.c -o $(BUILDDIR)/main.o
+	avr-gcc $(WARN) $(DEVINFO) -o $(BUILDDIR)/main.elf $(BUILDDIR)/main.o
+	avr-objcopy -O ihex $(BUILDDIR)/main.elf $(BUILDDIR)/main.hex
