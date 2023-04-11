@@ -24,15 +24,26 @@ void sendbyte(unsigned char);
 void readbytes(unsigned char*);
 void sendbuf(unsigned char*);
 void parse(unsigned char*, unsigned char*, int*);
+
 int main (void) {
-   unsigned char buf[8] = { 0x00, 0x5B, 0x4F, 0x66, 0x77, 0x7C, 0x58, 0x5E, };
-   unsigned char readbuf[8] = { 0 };
+   unsigned char buf[8] = { chars[1], chars[2], chars[3], chars[4], chars[10], chars[11], chars[12], chars[13], };
+   // unsigned char buf[8] = { 0 };
+   unsigned char readbuf[4] = { 0 };
+   unsigned char readbuft[4] = { 0 };
    int next = 1;
+//    unsigned char changed = 0;
    while(1) {
       DDRD = 0b11100000;
       reset();
       readbytes(readbuf);
+//      for (int u = 0; u < 4; u++) {
+//         if (readbuf[u] != readbuft[u]) {
+//            changed ^= (1 << 7);
+//         }
+//      }
+      readbytes(readbuft);
       parse(readbuf, buf, &next);
+//      buf[0] |= changed;
       sendbyte(0x88);
       sendbuf(buf);
    }
@@ -55,40 +66,40 @@ int main (void) {
 
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
-void parse(unsigned char *rb, unsigned char *b, int *n) {
-   if (rb[0] == 0b00000100) {            // 0 pressed
-      b[0] = chars[0];
-   } else if (rb[2] == 0b00100000) {     // 1 pressed
-      b[0] = chars[1];
-   } else if (rb[3] == 0b00000010) {     // 2 pressed
-      b[0] = chars[2];
-   } else if (rb[3] == 0b00100000) {     // 3 pressed
-      b[0] = chars[3];
-   } else if (rb[1] == 0b00000010) {     // 4 pressed
-      b[0] = chars[4];
-   } else if (rb[1] == 0b00100000) {     // 5 pressed
-      b[0] = chars[5];
-   } else if (rb[2] == 0b00000010) {     // 6 pressed
-      b[0] = chars[6];
-   } else if (rb[3] == 0b01000000) {     // 7 pressed
-      b[0] = chars[7];
-   } else if (rb[0] == 0b00000010) {     // 8 pressed
-      b[0] = chars[8];
-   } else if (rb[0] == 0b00100000) {     // 9 pressed
-      b[0] = chars[9];
-   } else if (rb[0] == 0b00000001) {     // . pressed
-      b[0] = 0b10000000;
-   } else if (rb[1] == 0b00000100) {     // ENTER pressed
+void parse(unsigned char *readbuf, unsigned char *b, int *n) {
+   if (readbuf[0] == 0b00000100) {            // 0 pressed
+      b[7] = chars[0];
+   } else if (readbuf[2] == 0b00100000) {     // 1 pressed
+      b[7] = chars[1];
+   } else if (readbuf[3] == 0b00000010) {     // 2 pressed
+      b[7] = chars[2];
+   } else if (readbuf[3] == 0b00100000) {     // 3 pressed
+      b[7] = chars[3];
+   } else if (readbuf[1] == 0b00000010) {     // 4 pressed
+      b[7] = chars[4];
+   } else if (readbuf[1] == 0b00100000) {     // 5 pressed
+      b[7] = chars[5];
+   } else if (readbuf[2] == 0b00000010) {     // 6 pressed
+      b[7] = chars[6];
+   } else if (readbuf[3] == 0b01000000) {     // 7 pressed
+      b[7] = chars[7];
+   } else if (readbuf[0] == 0b00000010) {     // 8 pressed
+      b[7] = chars[8];
+   } else if (readbuf[0] == 0b00100000) {     // 9 pressed
+      b[7] = chars[9];
+   } else if (readbuf[0] == 0b00000001) {     // . pressed
+      b[7] = 0b10000000;
+   } else if (readbuf[1] == 0b00000100) {     // ENTER pressed
       if ((*n)++ > 8) {
          *n = 1;
       }
-      b[*n] = b[0];
-   } else if (rb[1] == 0b01000000) {     // NUMLOCK pressed
+      b[*n] = b[7];
+   } else if (readbuf[1] == 0b01000000) {     // NUMLOCK pressed
       for (int i = 0; i < 8; i++) {
          b[i] = 0;
       }
    } else {
-      b[0] = b[0];
+      b[7] = b[7];
    }
 }
 
@@ -99,10 +110,10 @@ void shiftout(int nbits, unsigned char cmd) {
       PORTD ^= (1 << CLK); // toggle CLK (low)
       PORTD &= ~(1 << DIO); // reset DIO
       PORTD |= (((cmd & (1<< cbit)) >> cbit) << DIO);
-            // create 8 bit mask with lsb set, shift that bit left "cbit" times
-            // AND with cmd to get the bit of interest
-            // shift extracted bit back to LSB to "reset" position
-            // shift bit left to line up with DIO
+      // create 8 bit mask with lsb set, shift that bit left "cbit" times
+      // AND with cmd to get the bit of interest
+      // shift extracted bit back to LSB to "reset" position
+      // shift bit left to line up with DIO
       _delay_us(DTIME);
       PORTD ^= (1 << CLK); // toggle CLK (high)
       _delay_us(DTIME);
@@ -142,24 +153,22 @@ void sendbuf(unsigned char *buf) {
    sendbyte(0x40); // set auto increment mode
    PORTD &= ~(1<<STB); // bring STB low
    shiftout(8, 0xC0);
-   for (int reg = 0; reg < 8; reg++) {
-      for (int bit = 0; bit < 8; bit++) {
-         // send data to register
-         for (int digit = 0; digit < 8; digit++) {
-            PORTD ^= (1<<CLK); // toggle CLK (low)
-            _delay_us(DTIME);
-            PORTD &= ~(1<<DIO); // reset DIO
-            PORTD |= (((buf[digit] & (1<<bit)) >> bit)<<DIO);
-            // create 8 bit mask with lsb set, shift that bit left "bit" times
-            // AND with the current digit to get the bit of interest
-            // shift extracted bit back to LSB to "reset" position
-            // shift bit left to line up with DIO
-            PORTD ^= (1<<CLK); // toggle CLK (high)
-            _delay_us(DTIME);
-         }
-         // fill up every other register with zeroes
-         shiftout(8, 0);
+   for (int bit = 0; bit < 8; bit++) {
+      // send data to register
+      for (int digit = 0; digit < 8; digit++) {
+         PORTD ^= (1<<CLK); // toggle CLK (low)
+         _delay_us(DTIME);
+         PORTD &= ~(1<<DIO); // reset DIO
+         PORTD |= (((buf[digit] & (1<<bit)) >> bit)<<DIO);
+         // create 8 bit mask with lsb set, shift that bit left "bit" times
+         // AND with the current digit to get the bit of interest
+         // shift extracted bit back to LSB to "reset" position
+         // shift bit left to line up with DIO
+         PORTD ^= (1<<CLK); // toggle CLK (high)
+         _delay_us(DTIME);
       }
+      // fill up every other register with zeroes
+      shiftout(8, 0);
    }
    PORTD |= (1<<STB); // bring STB high
 }
