@@ -52,21 +52,6 @@ int main (void) {
       sendbyte(0x88);
       sendbuf(buf);
    }
-
-   //  scrolling code
-   //
-   //   while(1) {
-   //      unsigned char readbuf = 0;
-   //      for (int a = 0; a < 8; a++) {
-   //         unsigned char pushed = buf[0];
-   //         for (int x = 0; x < 8; x++) {
-   //            buf[x] = buf[x+1];
-   //         }
-   //         buf[7] = pushed;
-   //         _delay_ms(100);
-   //         sendbuf(buf);
-   //      }
-   //   }
 }
 // ISR with TIMER1_OVF_vect
 // this ISR runs when the timer counter overflows
