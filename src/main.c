@@ -1,71 +1,76 @@
 // main.c
 // tentaku_mod
-// gotta use bitwise ops to do bit manupulation
-// who woulda guessed
-// PORTD5: DIO
-// PORTD6: CLK
-// PORTD7: STB
 // vika
 
 #include <stdlib.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
 #include <string.h>
 #include "main.h"
 
 #define STB PORTD7
 #define CLK PORTD6
 #define DIO PORTD5
-#define DTIME 5
 
 #define INTPER 65523 // through trial and error, this one is about 32 kHz
                      // about 15 us of thinking time !
-                     // #define INTPER 1
 
-void reset();
 void intsetup();
 
-unsigned char bytebuf = 0x88;    // turn on the lights
-int cbit = 0;
-int ready = 0;
-unsigned char intmsk = 0;
+// set variables modified by ISR as volatile
+volatile unsigned char bytebuf = 0;
+volatile int bitsleft = 8;
+volatile int ready = 0;
+
+unsigned char queue[8] = { 0x40, 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+// unsigned char dataqueue[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
 int main (void) {
-   //   unsigned char buf[8] = { chars[1], chars[2], chars[3], chars[4], chars[10], chars[11], chars[12], chars[13], };
-   intsetup();
-   cbit = 7;
-   ready = 1;
+   intsetup();                               // setup interrupt system
+
+   bytebuf = 0x88;                           // queue initial screen on command
+   ready = 1;                                // ready to send next byte
    while(1) {
-      // firmware doesn't work without a while loop ?
+      if (ready == 0 && queue[0]) {          // get next command as long as there is one
+         bytebuf = queue[0];                 // set next command to first in queue
+         for (int i = 0; i < 7; i++) {  
+            queue[i] = queue[i+1];           // shift queue left
+         }
+         queue[7] = 0;                       // clear queue end to prevent dupe
+         ready = 1;                          // ready to send next byte
+      }
    }
 }
 // ISR with TIMER1_OVF_vect
 // this ISR runs when the timer counter overflows
-// the timer overflows whenever it counts down to INTPER from 2^16
+// timer resets whenever it counts down to INTPER from 2^16 at 1/(8e6 Hz/ 8) s
 ISR (TIMER1_OVF_vect) {
-   // PORTB ^= (1 << PORTB3);       // toggle our "clock"
-   if (cbit && ready) {
-      intmsk = (1 << (7-cbit));
-      cbit--;
-      PORTB ^= (1 << PORTB3);       // toggle our "clock"
-   } else if (!cbit && ready) {
-      cbit = 7;
+   if (!bitsleft && (PORTD & (1 << CLK))) {           // when done sending, reset all pins
+      bitsleft = 8;
       ready = 0;
-      PORTB = 0;
+      PORTD = (1 << STB) | (1 << CLK);
+   } else if (ready) {
+      PORTD &= ~(1 << STB);            // set STB low as long as we are sending
+      if (PORTD & (1 << CLK)) {        // if clock is high, load next LSB
+         PORTD &= ~(1 << PORTD5);         // clear data pin
+         PORTD |= ((bytebuf & 1) << PORTD5); // extract LSB, shift to DIO and set
+         PORTD ^= (1 << CLK);             // toggle clock
+         bytebuf >>= 1;                   // right shift once for next bit
+         bitsleft--;                      // next bit
+      } else {                         // if clock is low, set high
+         PORTD ^= (1 << CLK);             // toggle clock
+      }
    }
    TCNT1 = INTPER;               // 15.8 us for 8MHz clock
 }
 
 // interrupt setup code
 void intsetup() {
-   DDRB = (1 << DDB3);
-   TCNT1 = INTPER;               // 15.8 us for 8MHz clock
-   TCCR1A = 0x00;                // Set normal counter mode
-   TCCR1B = (1 << CS11);           // Set 8 pre-scaler
-   TIMSK1 = (1 << TOIE1);        // Set overflow interrupt enable bit
-   sei();                        // Enable interrupts globally
-}
-
-void reset() {
-   PORTD |= ((1<<CLK) | (1<<STB)); // bring CLK and STB high
+   DDRD = (1 << DDD5) | (1 << DDD6) | (1 << DDD7); // set pins 5-7 to output
+   PORTD = (1 << STB) | (1 << CLK); // set STB, CLK high
+   TCNT1 = INTPER;               // 15.8 us
+   TCCR1A = 0;                   // use normal counter mode
+   TCCR1B = (1 << CS11);         // divide F_CPU by 1024
+   TIMSK1 = (1 << TOIE1);        // trigger interrupt on counter overflow
+   sei();                        // set global interrupt flag
 }
