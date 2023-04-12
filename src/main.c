@@ -41,19 +41,19 @@ int main (void) {
 // this ISR runs when the timer counter overflows
 // the timer overflows whenever it counts down to INTPER from 2^16
 ISR (TIMER1_OVF_vect) {
-   PORTB ^= (1 << PORTB3); // Toggle the 5th data register of PORTB
+   PORTB ^= (1 << PORTB3);
    tog ^= (1 << 7);
-   TCNT1 = INTPER; // 15.8 us for 8MHz clock
+   TCNT1 = INTPER;               // 15.8 us for 8MHz clock
 }
 
 // interrupt setup code
 void intsetup() {
-   DDRB = (1 << DDB3); // Set 5th data direction register of PORTB. A set value means output
-   TCNT1 = INTPER; // 15.8 us for 8MHz clock
-   TCCR1A = 0x00; // Set normal counter mode
-   TCCR1B = (1<<CS11); // Set 8 pre-scaler
-   TIMSK1 = (1 << TOIE1); // Set overflow interrupt enable bit
-   sei(); // Enable interrupts globally
+   DDRB = (1 << DDB3);
+   TCNT1 = INTPER;               // 15.8 us for 8MHz clock
+   TCCR1A = 0x00;                // Set normal counter mode
+   TCCR1B = (1<<CS11);           // Set 8 pre-scaler
+   TIMSK1 = (1 << TOIE1);        // Set overflow interrupt enable bit
+   sei();                        // Enable interrupts globally
 }
 
 void reset() {
