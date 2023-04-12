@@ -13,7 +13,10 @@ SRCDIR=./src
 all:
 	@# make build folder if it doesn't exist already
 	@mkdir -p ./build
+	@mv $(BUILDDIR)/main.hex $(BUILDDIR)/main.hex.old
 	@printf " $(BANNER)\n"
 	avr-gcc $(WARN) $(OPT) $(DEVINFO) -c $(SRCDIR)/main.c -o $(BUILDDIR)/main.o
 	avr-gcc $(WARN) $(DEVINFO) -o $(BUILDDIR)/main.elf $(BUILDDIR)/main.o
 	avr-objcopy -O ihex $(BUILDDIR)/main.elf $(BUILDDIR)/main.hex
+	@shasum $(BUILDDIR)/main.hex.old
+	@shasum $(BUILDDIR)/main.hex
