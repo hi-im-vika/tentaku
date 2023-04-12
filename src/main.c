@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <string.h>
 #include "main.h"
@@ -18,32 +19,36 @@
 #define DIO PORTD5
 #define DTIME 5
 
+// #define INTPER 65523 // through trial and error, this one is about 32 kHz
+                     // about 15 us of thinking time !
+#define INTPER 1
+
 void reset();
 const unsigned char zeroes[8] = { 0 };
 void sendbyte(unsigned char);
 void readbytes(unsigned char*);
 void sendbuf(unsigned char*);
 void parse(unsigned char*, unsigned char*, int*);
+void intsetup();
+
+unsigned char tog = (1 << 7);
 
 int main (void) {
    unsigned char buf[8] = { chars[1], chars[2], chars[3], chars[4], chars[10], chars[11], chars[12], chars[13], };
-   // unsigned char buf[8] = { 0 };
    unsigned char readbuf[4] = { 0 };
    unsigned char readbuft[4] = { 0 };
    int next = 1;
-//    unsigned char changed = 0;
+   intsetup();
    while(1) {
       DDRD = 0b11100000;
       reset();
       readbytes(readbuf);
-//      for (int u = 0; u < 4; u++) {
-//         if (readbuf[u] != readbuft[u]) {
-//            changed ^= (1 << 7);
-//         }
-//      }
       readbytes(readbuft);
       parse(readbuf, buf, &next);
-//      buf[0] |= changed;
+
+      buf[0] = (buf[0] & (((unsigned char) -1) >> 1)) | tog;
+      // blink based on interrupt clock cycle
+      
       sendbyte(0x88);
       sendbuf(buf);
    }
@@ -63,14 +68,30 @@ int main (void) {
    //      }
    //   }
 }
+// ISR with TIMER1_OVF_vect
+// this ISR runs when the timer counter overflows
+// the timer overflows whenever it counts down to INTPER from 2^16
+ISR (TIMER1_OVF_vect) {
+   PORTB ^= (1 << PORTB3); // Toggle the 5th data register of PORTB
+   tog ^= (1 << 7);
+   TCNT1 = INTPER; // 15.8 us for 8MHz clock
+}
+
+// interrupt setup code
+void intsetup() {
+   DDRB = (1 << DDB3); // Set 5th data direction register of PORTB. A set value means output
+   TCNT1 = INTPER; // 15.8 us for 8MHz clock
+   TCCR1A = 0x00; // Set normal counter mode
+   TCCR1B = (1<<CS11); // Set 8 pre-scaler
+   TIMSK1 = (1 << TOIE1); // Set overflow interrupt enable bit
+   sei(); // Enable interrupts globally
+}
 
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
 void parse(unsigned char *readbuf, unsigned char *b, int *n) {
    if (readbuf[0] == 0b00000100) {            // 0 pressed
       b[7] = chars[0];
-   } else if (readbuf[2] == 0b00100000) {     // 1 pressed
-      b[7] = chars[1];
    } else if (readbuf[3] == 0b00000010) {     // 2 pressed
       b[7] = chars[2];
    } else if (readbuf[3] == 0b00100000) {     // 3 pressed

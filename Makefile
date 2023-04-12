@@ -11,7 +11,7 @@ BUILDDIR=./build
 SRCDIR=./src
 
 all:
-	# make build folder if it doesn't exist already
+	@# make build folder if it doesn't exist already
 	@mkdir -p ./build
 	@printf " $(BANNER)\n"
 	avr-gcc $(WARN) $(OPT) $(DEVINFO) -c $(SRCDIR)/main.c -o $(BUILDDIR)/main.o
