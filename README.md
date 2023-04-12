@@ -13,6 +13,15 @@ TENTAKU is a calculator with a numpad layout that uses mechanical keyswitches.
 - PINDX is read from when data is received
 
 ### Pins (Bits)
-- 5 - DIO (data input/out)
-- 6 - CLK (clock)
-- 7 - STB (strobe/chip select)
+- 5 (PORTD5) - DIO (data input/out)
+- 6 (PORTD6) - CLK (clock)
+- 7 (PORTD7) - STB (strobe/chip select)
+
+### ICSP Headers
+Listed from left to right with the board upright:
+- ~CS (PORTB2)
+- SCK (PORTB5)
+- MISO (PORTB4)
+- MOSI (PORTB3)
+- GND
+- VCC
