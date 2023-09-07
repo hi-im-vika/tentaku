@@ -2,9 +2,10 @@
 // tentaku_mod
 // gotta use bitwise ops to do bit manupulation
 // who woulda guessed
-// PORTD5: DIO
-// PORTD6: CLK
-// PORTD7: STB
+// PORTD5: DIO (VIO2)
+// PORTD6: CLK (GRN2)
+// PORTD7: STB (PCH2)
+// SPI: PCH GRN VIO BRN BLK RED
 // vika
 
 #include <stdlib.h>
@@ -92,6 +93,8 @@ void intsetup() {
 void parse(unsigned char *readbuf, unsigned char *b, int *n) {
    if (readbuf[0] == 0b00000100) {            // 0 pressed
       b[7] = chars[0];
+   } else if (readbuf[2] == 0b00100000) {     // 1 pressed
+      b[7] = chars[1];
    } else if (readbuf[3] == 0b00000010) {     // 2 pressed
       b[7] = chars[2];
    } else if (readbuf[3] == 0b00100000) {     // 3 pressed
