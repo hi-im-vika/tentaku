@@ -1,5 +1,11 @@
 // main.c
 // tentaku_mod
+// gotta use bitwise ops to do bit manupulation
+// who woulda guessed
+// PORTD5: DIO (VIO2)
+// PORTD6: CLK (GRN2)
+// PORTD7: STB (PCH2)
+// SPI: PCH GRN VIO BRN BLK RED
 // vika
 
 #include <stdlib.h>
