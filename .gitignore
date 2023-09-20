@@ -54,6 +54,9 @@ dkms.conf
 # ignore build output
 build/
 
+# ignore macOS files
+*.DS_Store
+
 # ignore vim stuff
 *~
 *.swp
