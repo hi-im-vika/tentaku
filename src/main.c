@@ -19,6 +19,7 @@
 #define STB PORTD7
 #define CLK PORTD6
 #define DIO PORTD5
+#define SPIALL ((1 << STB) | (1 << CLK) | (1 << DIO))
 #define DTIME 5
 
 // #define INTPER 65523 // through trial and error, this one is about 32 kHz
@@ -42,7 +43,7 @@ int main (void) {
    int next = 1;
    intsetup();
    while(1) {
-      DDRD = 0b11100000;
+      DDRD = SPIALL;
       reset();
       readbytes(readbuf);
       readbytes(readbuft);
@@ -81,10 +82,9 @@ ISR (TIMER1_OVF_vect) {
 
 // interrupt setup code
 void intsetup() {
-   DDRB = (1 << DDB3); // Set 5th data direction register of PORTB. A set value means output
    TCNT1 = INTPER; // 15.8 us for 8MHz clock
    TCCR1A = 0x00; // Set normal counter mode
-   TCCR1B = (1<<CS11); // Set 8 pre-scaler
+   TCCR1B = (1 << CS11); // Set 8 pre-scaler
    TIMSK1 = (1 << TOIE1); // Set overflow interrupt enable bit
    sei(); // Enable interrupts globally
 }
