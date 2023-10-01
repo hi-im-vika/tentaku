@@ -116,10 +116,9 @@ void parse(uint32_t keys, uint8_t *b, int *n) {
          b[7] = SEG_9;
          break;
       case NP_ENT:
-         if ((*n)++ > 8) {
-            *n = 1;
+         for (int x = 0; x < 8; x++) {
+            b[x] = b[7];
          }
-         b[*n] = b[7];
          break;
       case NP_NUM:
          for (int i = 0; i < 8; i++) {
