@@ -38,6 +38,8 @@ void reset();
 // global variables
 volatile uint8_t blink = (1 << 7);
 const uint8_t zeroes[8] = { 0 };
+int stackA = 0;
+int stackB = 0;
 
 int main (void) {
    // uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
