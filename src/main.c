@@ -138,6 +138,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          nextSeg = SEG_0;
          break;
       case NP_1:
+         // show contents of stackA
          if (altMode) {
             clearBuffer(b);
             putToBuffer(b, stackA);
@@ -148,6 +149,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          nextSeg = SEG_1;
          break;
       case NP_2:
+         // show contents of stackB
          if (altMode) {
             clearBuffer(b);
             putToBuffer(b, stackB);
