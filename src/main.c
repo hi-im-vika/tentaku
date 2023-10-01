@@ -90,35 +90,46 @@ void intSetup() {
 // change b accordingly
 void parse(uint32_t keys, uint8_t *b, int *n) {
    int nextSeg = 0;
+   int isNumber = 0;
    switch (keys) {
       case NP_0:
+         isNumber = 1;
          nextSeg = SEG_0;
          break;
       case NP_1:
+         isNumber = 1;
          nextSeg = SEG_1;
          break;
       case NP_2:
+         isNumber = 1;
          nextSeg = SEG_2;
          break;
       case NP_3:
+         isNumber = 1;
          nextSeg = SEG_3;
          break;
       case NP_4:
+         isNumber = 1;
          nextSeg = SEG_4;
          break;
       case NP_5:
+         isNumber = 1;
          nextSeg = SEG_5;
          break;
       case NP_6:
+         isNumber = 1;
          nextSeg = SEG_6;
          break;
       case NP_7:
+         isNumber = 1;
          nextSeg = SEG_7;
          break;
       case NP_8:
+         isNumber = 1;
          nextSeg = SEG_8;
          break;
       case NP_9:
+         isNumber = 1;
          nextSeg = SEG_9;
          break;
       case NP_ENT:
@@ -131,14 +142,19 @@ void parse(uint32_t keys, uint8_t *b, int *n) {
             b[i] = 0;
          }
          break;
+      case NP_DEC:
+         b[7] |= 0x80;
+         break;
       default:
          b[7] = b[7];
          break;
    }
-   for (int n = 0; n < 7; n++) {
-      b[n] = b[n+1];
+   if (isNumber) {
+      for (int n = 0; n < 7; n++) {
+         b[n] = b[n+1];
+      }
+      b[7] = nextSeg;
    }
-   b[7] = nextSeg;
 }
 
 // shifts out cmd (LSB first), where bits is length of cmd (in bits)
