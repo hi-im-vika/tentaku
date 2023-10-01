@@ -26,17 +26,18 @@
 // about 15 us of thinking time !
 #define INTPER 1
 
-void reset();
-const uint8_t zeroes[8] = { 0 };
+// function prototypes
+void setup();
+void intSetup();
 void sendByte(uint8_t);
-void readbytes(uint8_t*);
 void sendBuffer(uint8_t*);
 void readBytes(uint32_t*);
 void parse(uint32_t, uint8_t*, int*);
-void setup();
-void intSetup();
+void reset();
 
-uint8_t blink = (1 << 7);
+// global variables
+volatile uint8_t blink = (1 << 7);
+const uint8_t zeroes[8] = { 0 };
 
 int main (void) {
    uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
