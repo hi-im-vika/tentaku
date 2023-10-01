@@ -190,6 +190,12 @@ void parseInput(uint32_t keys, uint8_t *b) {
       case NP_SUB:
          calcFuncSub(b);
          break;
+      case NP_MUL:
+         calcFuncMul(b);
+         break;
+      case NP_DIV:
+         calcFuncDiv(b);
+         break;
       case NP_DEC:
          b[7] |= SEGPART_7;
          break;
@@ -198,7 +204,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          break;
    }
    if (isNumber) {
-      for (int n = 0; n < 7; n++) {
+      for (int n = 1; n < 7; n++) {
          b[n] = b[n+1];
       }
       b[7] = nextSeg;
@@ -244,6 +250,34 @@ void calcFuncSub(uint8_t *buf) {
       stackA = res;
    } else {
       res = stackA - parseDisplay(buf);
+      stackA = res;
+   }
+   clearBuffer(buf);
+   putToBuffer(buf, res);
+}
+
+void calcFuncMul(uint8_t *buf) {
+   int64_t res = 0;
+   if(!buf[7]) {
+      res = stackB * stackA; 
+      stackB = 0;
+      stackA = res;
+   } else {
+      res = stackA * parseDisplay(buf);
+      stackA = res;
+   }
+   clearBuffer(buf);
+   putToBuffer(buf, res);
+}
+
+void calcFuncDiv(uint8_t *buf) {
+   int64_t res = 0;
+   if(!buf[7]) {
+      res = stackB / stackA; 
+      stackB = 0;
+      stackA = res;
+   } else {
+      res = stackA / parseDisplay(buf);
       stackA = res;
    }
    clearBuffer(buf);
