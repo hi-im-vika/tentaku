@@ -36,7 +36,7 @@ void parse(uint32_t, uint8_t*, int*);
 void setup();
 void intSetup();
 
-uint8_t tog = (1 << 7);
+uint8_t blink = (1 << 7);
 
 int main (void) {
    uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
@@ -48,34 +48,19 @@ int main (void) {
       readBytes(&keyStates);
       parse(keyStates, buf, &next);
 
-      buf[0] = (buf[0] & (((uint8_t) -1) >> 1)) | tog;
+      buf[0] = (buf[0] & ~(0x80)) | blink;
       // blink based on interrupt clock cycle
 
       sendByte(0x88);
       sendBuffer(buf);
    }
-
-   //  scrolling code
-   //
-   //   while(1) {
-   //      uint8_t readbuf = 0;
-   //      for (int a = 0; a < 8; a++) {
-   //         uint8_t pushed = buf[0];
-   //         for (int x = 0; x < 8; x++) {
-   //            buf[x] = buf[x+1];
-   //         }
-   //         buf[7] = pushed;
-   //         _delay_ms(100);
-   //         sendBuffer(buf);
-   //      }
-   //   }
 }
 
 // ISR with TIMER1_OVF_vect
 // this ISR runs when the timer counter overflows
 // the timer overflows whenever it counts down to INTPER from 2^16
 ISR (TIMER1_OVF_vect) {
-   tog ^= (1 << 7);
+   blink ^= (1 << 7);
    TCNT1 = INTPER; // 15.8 us for 8MHz clock
 }
 

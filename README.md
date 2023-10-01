@@ -3,7 +3,7 @@
 TENTAKU is a calculator with a numpad layout that uses mechanical keyswitches.
 
 ## Info
-- [ATMEGA328P](https://www.ti.com/lit/ug/spmu298e/spmu298e.pdf) used as main controller
+- [ATMEGA328P](https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf) used as main controller
 - [TM1638](https://futuranet.it/futurashop/image/catalog/data/Download/TM1638_V1.3_EN.pdf) used to control LEDs and 7-segment displays
 
 ## Building and Flashing
