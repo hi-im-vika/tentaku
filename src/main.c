@@ -75,7 +75,6 @@ int main (void) {
 // this ISR runs when the timer counter overflows
 // the timer overflows whenever it counts down to INTPER from 2^16
 ISR (TIMER1_OVF_vect) {
-   PORTB ^= (1 << PORTB3); // Toggle the 5th data register of PORTB
    tog ^= (1 << 7);
    TCNT1 = INTPER; // 15.8 us for 8MHz clock
 }
