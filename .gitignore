@@ -58,3 +58,6 @@ build/
 *~
 *.swp
 *.swo
+
+# ignore funny macOS files
+.DS_Store
