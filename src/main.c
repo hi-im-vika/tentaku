@@ -92,6 +92,36 @@ void intSetup() {
 // change b accordingly
 void parse(uint32_t keys, uint8_t *b, int *n) {
    switch (keys) {
+      case NP_0:
+         b[7] = SEG_0;
+         break;
+      case NP_1:
+         b[7] = SEG_1;
+         break;
+      case NP_2:
+         b[7] = SEG_2;
+         break;
+      case NP_3:
+         b[7] = SEG_3;
+         break;
+      case NP_4:
+         b[7] = SEG_4;
+         break;
+      case NP_5:
+         b[7] = SEG_5;
+         break;
+      case NP_6:
+         b[7] = SEG_6;
+         break;
+      case NP_7:
+         b[7] = SEG_7;
+         break;
+      case NP_8:
+         b[7] = SEG_8;
+         break;
+      case NP_9:
+         b[7] = SEG_9;
+         break;
       case NP_ENT:
          if ((*n)++ > 8) {
             *n = 1;
