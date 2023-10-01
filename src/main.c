@@ -34,9 +34,9 @@ void readBytes(uint32_t*);
 void parse(uint32_t, uint8_t*, int*);
 void intSetup();
 
-uint8_t tog = (1 << 7);
 
 int main (void) {
+   uint8_t tog = (1 << 7);
    uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
    uint32_t keyStates = 0;
    int next = 1;
