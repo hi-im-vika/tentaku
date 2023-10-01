@@ -29,6 +29,7 @@
 void reset();
 const uint8_t zeroes[8] = { 0 };
 void sendByte(uint8_t);
+void readbytes(uint8_t*);
 void sendBuffer(uint8_t*);
 void readBytes(uint32_t*);
 void parse(uint32_t, uint8_t*, int*);
@@ -186,6 +187,29 @@ void readBytes(uint32_t *keys) {
 
 }
 
+void readbytes(uint8_t *readbuf) {
+   uint8_t oldstate = DDRD;
+   DDRD = 0b11100000; // set PORTD5 to PORTD7 as output
+   PORTD &= ~(1 << STB); // bring STB low
+   _delay_us(DTIME);
+   shiftOut(8, 0x42);
+   PORTD &= ~(1 << DIO); // reset DIO
+   DDRD = 0b11000000;
+   for (int cyc = 0; cyc < 4; cyc++) {
+      for (int d = 0; d < 8; d++) {
+         PORTD ^= (1 << CLK); // toggle CLK (low)
+         _delay_us(DTIME);
+         PORTD ^= (1 << CLK); // toggle CLK (high)
+         readbuf[cyc] &= ~(((-1) >> 7) << d);
+         readbuf[cyc] |= (((PIND & (1 << PIND5)) >> PIND5) << d); //|= masked;
+         _delay_us(DTIME);
+      }
+   }
+   PORTD |= (1 << STB); // bring STB high
+   _delay_us(DTIME);
+   DDRD = oldstate;
+}
+
 // send a command byte
 void sendByte(uint8_t b) {
 
@@ -194,6 +218,7 @@ void sendByte(uint8_t b) {
    PORTD |= (1 << STB); // bring STB high
 
 }
+
 
 // send buffer array consisting of characters to display
 void sendBuffer(uint8_t *buf) {
