@@ -40,4 +40,22 @@
 #define SEG_E 0x79
 #define SEG_F 0x71
 
+//     0
+//    ---
+// 5 | 6 | 1
+//    ---
+// 4 |   | 2
+//    --- .
+//     3  7
+//
+
+#define SEGPART_0 0x01
+#define SEGPART_1 0x02
+#define SEGPART_2 0x04
+#define SEGPART_3 0x08
+#define SEGPART_4 0x10
+#define SEGPART_5 0x20
+#define SEGPART_6 0x40
+#define SEGPART_7 0x80
+
 #endif

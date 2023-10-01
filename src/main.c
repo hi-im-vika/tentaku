@@ -10,10 +10,11 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+#include <math.h>       // duh lol
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include <string.h>
 #include "main.h"
 
 #define STB PORTD7
@@ -26,30 +27,57 @@
 // about 15 us of thinking time !
 #define INTPER 1
 
-void reset();
-const uint8_t zeroes[8] = { 0 };
-void sendByte(uint8_t);
-void readbytes(uint8_t*);
-void sendBuffer(uint8_t*);
-void readBytes(uint32_t*);
-void parse(uint32_t, uint8_t*, int*);
+// function prototypes
 void setup();
 void intSetup();
+void reset();
+void sendByte(uint8_t);
+void sendBuffer(uint8_t*);
+void readBytes(uint32_t*);
+void parseInput(uint32_t, uint8_t*, int*);
+int whatNumberIsThis(uint8_t);
+uint8_t whatCharacterIsThis(int);
+uint64_t parseDisplay(uint8_t*);
+void putToBuffer(uint8_t*, uint64_t);
+void clearBuffer(uint8_t*);
 
-uint8_t blink = (1 << 7);
+// stack manipulation
+void stackInsert(uint8_t*);
+
+// calculator functions
+void calcFuncAdd(uint8_t*);
+
+// global variables
+volatile uint8_t blink = (1 << 7);
+const uint8_t zeroes[8] = { 0 };
+uint64_t stackA = 0;
+uint64_t stackB = 0;
 
 int main (void) {
-   uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
+   // startup banner
+   uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
+
+   uint8_t buf[8] = { 0 };
    uint32_t keyStates = 0;
    int next = 1;
+   uint32_t prevKeys = 0;
    setup();
    intSetup();
+   sendBuffer(startup); // comment this out to disable startup message
+   _delay_ms(1000);
    while(1) {
+      sendByte(0x33); // meaningless data for trigger on logic analyzer
+      prevKeys = keyStates;
       readBytes(&keyStates);
-      parse(keyStates, buf, &next);
+      if ((prevKeys != keyStates) && (prevKeys == 0x00)) {
+         parseInput(keyStates, buf, &next);
+      }
 
-      buf[0] = (buf[0] & ~(0x80)) | blink;
       // blink based on interrupt clock cycle
+      // only if there's something in the stack
+//         buf[0] = (buf[0] & ~(0x80)) | blink;
+      buf[0] = stackA ? buf[0] | 0b00010000 : buf[0];
+      buf[0] = stackB ? buf[0] | 0b00100000 : buf[0];
 
       sendByte(0x88);
       sendBuffer(buf);
@@ -66,8 +94,8 @@ ISR (TIMER1_OVF_vect) {
 
 // general setup code
 void setup() {
-      DDRD = SPIALL;
-      reset();
+   DDRD = SPIALL;
+   reset();
 }
 
 // interrupt setup code
@@ -81,62 +109,225 @@ void intSetup() {
 
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
-void parse(uint32_t keys, uint8_t *b, int *n) {
-
+void parseInput(uint32_t keys, uint8_t *b, int *n) {
+   int nextSeg = 0;
+   int isNumber = 0;
    switch (keys) {
       case NP_0:
-         b[7] = SEG_0;
+         isNumber = 1;
+         nextSeg = SEG_0;
          break;
       case NP_1:
-         b[7] = SEG_1;
+         isNumber = 1;
+         nextSeg = SEG_1;
          break;
       case NP_2:
-         b[7] = SEG_2;
+         isNumber = 1;
+         nextSeg = SEG_2;
          break;
       case NP_3:
-         b[7] = SEG_3;
+         isNumber = 1;
+         nextSeg = SEG_3;
          break;
       case NP_4:
-         b[7] = SEG_4;
+         isNumber = 1;
+         nextSeg = SEG_4;
          break;
       case NP_5:
-         b[7] = SEG_5;
+         isNumber = 1;
+         nextSeg = SEG_5;
          break;
       case NP_6:
-         b[7] = SEG_6;
+         isNumber = 1;
+         nextSeg = SEG_6;
          break;
       case NP_7:
-         b[7] = SEG_7;
+         isNumber = 1;
+         nextSeg = SEG_7;
          break;
       case NP_8:
-         b[7] = SEG_8;
+         isNumber = 1;
+         nextSeg = SEG_8;
          break;
       case NP_9:
-         b[7] = SEG_9;
+         isNumber = 1;
+         nextSeg = SEG_9;
          break;
       case NP_ENT:
-         if ((*n)++ > 8) {
-            *n = 1;
-         }
-         b[*n] = b[7];
+         stackInsert(b);
          break;
       case NP_NUM:
-         for (int i = 0; i < 8; i++) {
-            b[i] = 0;
+         if (b[7]) {
+            for (int i = 0; i < 8; i++) {
+               b[i] = 0;
+            }
+         } else {
+            stackA = 0;
+            stackB = 0;
+            clearBuffer(b);
          }
+         break;
+      case NP_ADD:
+         calcFuncAdd(b);
+         break;
+      case NP_DEC:
+         b[7] |= SEGPART_7;
          break;
       default:
          b[7] = b[7];
          break;
    }
+   if (isNumber) {
+      for (int n = 0; n < 7; n++) {
+         b[n] = b[n+1];
+      }
+      b[7] = nextSeg;
+   }
+}
 
+void clearBuffer(uint8_t *buf) {
+   for (int seg = 0; seg < 8; seg++) {
+      buf[seg] = 0;
+   }
+}
+
+void stackInsert(uint8_t *buf) {
+   int currentNumber = parseDisplay(buf);
+   if (stackA) {
+      stackB = stackA;
+      stackA = currentNumber;
+   } else {
+      stackA = currentNumber;
+   }
+   clearBuffer(buf);
+}
+
+void calcFuncAdd(uint8_t *buf) {
+   uint64_t res = 0;
+   if(!buf[7]) {
+     res = stackB + stackA; 
+     stackB = 0;
+     stackA = res;
+   }
+   clearBuffer(buf);
+   putToBuffer(buf, res);
+}
+
+int whatNumberIsThis(uint8_t bufseg) {
+   switch (bufseg) {
+      case SEG_0:
+         return 0;
+         break;
+      case SEG_1:
+         return 1;
+         break;
+      case SEG_2:
+         return 2;
+         break;
+      case SEG_3:
+         return 3;
+         break;
+      case SEG_4:
+         return 4;
+         break;
+      case SEG_5:
+         return 5;
+         break;
+      case SEG_6:
+         return 6;
+         break;
+      case SEG_7:
+         return 7;
+         break;
+      case SEG_8:
+         return 8;
+         break;
+      case SEG_9:
+         return 9;
+         break;
+      default:
+         return 0;
+         break;
+   }
+}
+
+// takes an int and returns the seven segment representation
+uint8_t whatCharacterIsThis(int n) {
+   switch (n) {
+      case 0:
+         return SEG_0;
+         break;
+      case 1:
+         return SEG_1;
+         break;
+      case 2:
+         return SEG_2;
+         break;
+      case 3:
+         return SEG_3;
+         break;
+      case 4:
+         return SEG_4;
+         break;
+      case 5:
+         return SEG_5;
+         break;
+      case 6:
+         return SEG_6;
+         break;
+      case 7:
+         return SEG_7;
+         break;
+      case 8:
+         return SEG_8;
+         break;
+      case 9:
+         return SEG_9;
+         break;
+      default:
+         return 0x00;
+         break;
+   }
+}
+
+uint64_t parseDisplay(uint8_t *buf) {
+   uint64_t temp = 0;
+   for (int seg = 7; seg > 1; seg--) {
+      if (buf[seg] != 0x00) {
+         temp += whatNumberIsThis(buf[seg]) * pow(10, 7 - seg);
+      }
+   }
+   return temp;
+}
+
+int numberAtPos(uint64_t number, int pos) {
+   uint64_t temp = 0;
+   uint64_t mulBy = 1;
+   for (int ex = 0; ex < pos; ex++) {
+      mulBy *= 10;
+   }
+   temp = number % (mulBy * 10);
+   temp /= mulBy;
+   return (int) temp;
+}
+
+void putToBuffer(uint8_t *buf, uint64_t i) {
+   for (int seg = 7; seg > 0; seg--) {
+      buf[seg] = whatCharacterIsThis(numberAtPos(i,7 - seg));
+   }
+   for (int seg = 1; seg < 7; seg++) {
+      if (buf[seg] == SEG_0) {
+         buf[seg] = 0x00;
+      } else {
+         break;
+      }
+   }
 }
 
 // shifts out cmd (LSB first), where bits is length of cmd (in bits)
 // does not affect STB
 // this is OK
 void shiftOut(int bits, uint8_t cmd) {
-
    DDRD |= (1 << DIO);                       // configure DIO as output
    for (int bit = 0; bit < bits; bit++) {
       PORTD &= ~((1 << DIO) | (1 << CLK));   // clear CLK and DIO
@@ -148,11 +339,9 @@ void shiftOut(int bits, uint8_t cmd) {
       PORTD |= (1 << CLK);                   // set CLK (high), clock out the bit
       _delay_us(DTIME);
    }
-
 }
 
 void readBytes(uint32_t *keys) {
-
    *keys = 0;              // clear last read key state
    DDRD = SPIALL;          // set all SPI pins to output
    PORTD &= ~(1 << STB);   // clear STB (begin transmission)
@@ -170,21 +359,17 @@ void readBytes(uint32_t *keys) {
    }
    PORTD |= (1 << STB);    // set STB (end transmission)
    _delay_us(DTIME);
-
 }
 
 // send a command byte
 void sendByte(uint8_t b) {
-
    PORTD &= ~(1 << STB); // bring STB low
    shiftOut(8, b);
    PORTD |= (1 << STB); // bring STB high
-
 }
 
 // send buffer array consisting of characters to display
 void sendBuffer(uint8_t *buf) {
-
    sendByte(0x40);               // send command to set auto increment mode
    PORTD &= ~(1 << STB);         // clear STB (begin conversation)
    shiftOut(8, 0xC0);            // send command to set start address at 0x00
