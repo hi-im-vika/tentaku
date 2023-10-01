@@ -32,7 +32,8 @@ void intSetup();
 void sendByte(uint8_t);
 void sendBuffer(uint8_t*);
 void readBytes(uint32_t*);
-void parse(uint32_t, uint8_t*, int*);
+void parseInput(uint32_t, uint8_t*, int*);
+int parseDisplay(uint8_t*);
 void reset();
 
 // global variables
@@ -54,7 +55,7 @@ int main (void) {
       prevKeys = keyStates;
       readBytes(&keyStates);
       if ((prevKeys != keyStates) && (prevKeys == 0x00)) {
-         parse(keyStates, buf, &next);
+         parseInput(keyStates, buf, &next);
       }
 
       // blink based on interrupt clock cycle
@@ -90,7 +91,7 @@ void intSetup() {
 
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
-void parse(uint32_t keys, uint8_t *b, int *n) {
+void parseInput(uint32_t keys, uint8_t *b, int *n) {
    int nextSeg = 0;
    int isNumber = 0;
    switch (keys) {
@@ -157,6 +158,10 @@ void parse(uint32_t keys, uint8_t *b, int *n) {
       }
       b[7] = nextSeg;
    }
+}
+
+int parseDisplay(uint8_t *buf) {
+   return 0;
 }
 
 // shifts out cmd (LSB first), where bits is length of cmd (in bits)
