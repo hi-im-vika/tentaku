@@ -32,18 +32,17 @@ void sendByte(uint8_t);
 void sendBuffer(uint8_t*);
 void readBytes(uint32_t*);
 void parse(uint32_t, uint8_t*, int*);
+void setup();
 void intSetup();
-
 
 int main (void) {
    uint8_t tog = (1 << 7);
    uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
    uint32_t keyStates = 0;
    int next = 1;
+   setup();
    intSetup();
    while(1) {
-      DDRD = SPIALL;
-      reset();
       readBytes(&keyStates);
       parse(keyStates, buf, &next);
 
@@ -78,6 +77,12 @@ ISR (TIMER1_OVF_vect) {
    TCNT1 = INTPER; // 15.8 us for 8MHz clock
 }
 
+// general setup code
+void setup() {
+      DDRD = SPIALL;
+      reset();
+}
+
 // interrupt setup code
 void intSetup() {
    TCNT1 = INTPER;         // counter starts at overflow value
@@ -90,6 +95,7 @@ void intSetup() {
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
 void parse(uint32_t keys, uint8_t *b, int *n) {
+
    switch (keys) {
       case NP_0:
          b[7] = SEG_0;
@@ -136,12 +142,14 @@ void parse(uint32_t keys, uint8_t *b, int *n) {
          b[7] = b[7];
          break;
    }
+
 }
 
 // shifts out cmd (LSB first), where bits is length of cmd (in bits)
 // does not affect STB
 // this is OK
 void shiftOut(int bits, uint8_t cmd) {
+
    DDRD |= (1 << DIO);                       // configure DIO as output
    for (int bit = 0; bit < bits; bit++) {
       PORTD &= ~((1 << DIO) | (1 << CLK));   // clear CLK and DIO
@@ -153,9 +161,11 @@ void shiftOut(int bits, uint8_t cmd) {
       PORTD |= (1 << CLK);                   // set CLK (high), clock out the bit
       _delay_us(DTIME);
    }
+
 }
 
 void readBytes(uint32_t *keys) {
+
    *keys = 0;              // clear last read key state
    DDRD = SPIALL;          // set all SPI pins to output
    PORTD &= ~(1 << STB);   // clear STB (begin transmission)
@@ -173,13 +183,16 @@ void readBytes(uint32_t *keys) {
    }
    PORTD |= (1 << STB);    // set STB (end transmission)
    _delay_us(DTIME);
+
 }
 
 // send a command byte
 void sendByte(uint8_t b) {
+
    PORTD &= ~(1 << STB); // bring STB low
    shiftOut(8, b);
    PORTD |= (1 << STB); // bring STB high
+
 }
 
 // send buffer array consisting of characters to display
