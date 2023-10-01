@@ -27,7 +27,7 @@
 
 void reset();
 const uint8_t zeroes[8] = { 0 };
-void sendbyte(uint8_t);
+void sendByte(uint8_t);
 void readbytes(uint8_t*);
 void sendbuf(uint8_t*);
 void parse(uint8_t*, uint8_t*, int*);
@@ -51,7 +51,7 @@ int main (void) {
       buf[0] = (buf[0] & (((uint8_t) -1) >> 1)) | tog;
       // blink based on interrupt clock cycle
       
-      sendbyte(0x88);
+      sendByte(0x88);
       sendbuf(buf);
    }
 
@@ -168,14 +168,14 @@ void readbytes(uint8_t *readbuf) {
    DDRD = oldstate;
 }
 
-void sendbyte(uint8_t b) {
+void sendByte(uint8_t b) {
    PORTD &= ~(1 << STB); // bring STB low
    shiftOut(8, b);
    PORTD |= (1 << STB); // bring STB high
 }
 
 void sendbuf(uint8_t *buf) {
-   sendbyte(0x40); // set auto increment mode
+   sendByte(0x40); // set auto increment mode
    PORTD &= ~(1<<STB); // bring STB low
    shiftOut(8, 0xC0);
    for (int bit = 0; bit < 8; bit++) {
