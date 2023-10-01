@@ -32,7 +32,7 @@ void sendByte(uint8_t);
 void readbytes(uint8_t*);
 void sendbuf(uint8_t*);
 void parse(uint8_t*, uint8_t*, int*);
-void intsetup();
+void intSetup();
 
 uint8_t tog = (1 << 7);
 
@@ -41,7 +41,7 @@ int main (void) {
    uint8_t readbuf[4] = { 0 };
    uint8_t readbuft[4] = { 0 };
    int next = 1;
-   intsetup();
+   intSetup();
    while(1) {
       DDRD = SPIALL;
       reset();
@@ -81,7 +81,7 @@ ISR (TIMER1_OVF_vect) {
 }
 
 // interrupt setup code
-void intsetup() {
+void intSetup() {
    TCNT1 = INTPER; // 15.8 us for 8MHz clock
    TCCR1A = 0x00; // Set normal counter mode
    TCCR1B = (1 << CS11); // Set 8 pre-scaler
