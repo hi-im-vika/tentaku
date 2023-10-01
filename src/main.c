@@ -43,14 +43,19 @@ int main (void) {
    uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
    uint32_t keyStates = 0;
    int next = 1;
+   uint32_t prevKeys = 0;
    setup();
    intSetup();
    while(1) {
+      sendByte(0x33); // meaningless data for trigger on logic analyzer
+      prevKeys = keyStates;
       readBytes(&keyStates);
-      parse(keyStates, buf, &next);
+      if (prevKeys != keyStates) {
+         parse(keyStates, buf, &next);
+      }
 
-      buf[0] = (buf[0] & ~(0x80)) | blink;
       // blink based on interrupt clock cycle
+      buf[0] = (buf[0] & ~(0x80)) | blink;
 
       sendByte(0x88);
       sendBuffer(buf);
@@ -67,8 +72,8 @@ ISR (TIMER1_OVF_vect) {
 
 // general setup code
 void setup() {
-      DDRD = SPIALL;
-      reset();
+   DDRD = SPIALL;
+   reset();
 }
 
 // interrupt setup code
