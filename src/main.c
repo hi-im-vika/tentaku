@@ -34,11 +34,11 @@ void reset();
 void sendByte(uint8_t);
 void sendBuffer(uint8_t*);
 void readBytes(uint32_t*);
-void parseInput(uint32_t, uint8_t*, int*);
-int whatNumberIsThis(uint8_t);
-uint8_t whatCharacterIsThis(int);
-uint64_t parseDisplay(uint8_t*);
-void putToBuffer(uint8_t*, uint64_t);
+void parseInput(uint32_t, uint8_t*);
+int segToNum(uint8_t);
+uint8_t numToSeg(int);
+int64_t parseDisplay(uint8_t*);
+void putToBuffer(uint8_t*, int64_t);
 void clearBuffer(uint8_t*);
 
 // stack manipulation
@@ -46,51 +46,70 @@ void stackInsert(uint8_t*);
 
 // calculator functions
 void calcFuncAdd(uint8_t*);
+void calcFuncSub(uint8_t*);
+void calcFuncMul(uint8_t*);
+void calcFuncDiv(uint8_t*);
 
 // global variables
 volatile uint8_t blink = (1 << 7);
 const uint8_t zeroes[8] = { 0 };
-uint64_t stackA = 0;
-uint64_t stackB = 0;
+uint8_t altMode = 0;
+
+// the STACK
+int64_t stackA = 0;
+int64_t stackB = 0;
 
 int main (void) {
    // startup banner
    uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
-
    uint8_t buf[8] = { 0 };
    uint32_t keyStates = 0;
-   int next = 1;
    uint32_t prevKeys = 0;
    setup();
-   intSetup();
+   //   intSetup();
    sendBuffer(startup); // comment this out to disable startup message
    _delay_ms(1000);
    while(1) {
       sendByte(0x33); // meaningless data for trigger on logic analyzer
-      prevKeys = keyStates;
+      prevKeys = keyStates; // edge detector or something
       readBytes(&keyStates);
-      if ((prevKeys != keyStates) && (prevKeys == 0x00)) {
-         parseInput(keyStates, buf, &next);
+      if((prevKeys != keyStates) && (prevKeys == 0x00)) {
+         if(keyStates & NP_NUM) {                  // if numlock is pressed
+            int ctr = 0;
+            while(keyStates & NP_NUM) {
+               ctr++;                              // begin counting held time
+               readBytes(&keyStates);              // keep checking if still held
+            }
+            if (ctr > 300) {                       // if held for a certain amount of time
+               altMode |= 0x01;                    // enable altmode
+               buf[0] = altMode ? buf[0] | SEGPART_7 : buf[0] & ~SEGPART_7;
+               sendBuffer(buf);                    // force refresh display buffer
+            } else {
+               keyStates |= NP_NUM;                // key not held for long enough, default action
+               parseInput(keyStates, buf);         // pass keyStates with button pressed to parseInput
+            }
+         } else {
+            parseInput(keyStates, buf);
+         }
       }
 
-      // blink based on interrupt clock cycle
-      // only if there's something in the stack
-//         buf[0] = (buf[0] & ~(0x80)) | blink;
-      buf[0] = stackA ? buf[0] | 0b00010000 : buf[0];
-      buf[0] = stackB ? buf[0] | 0b00100000 : buf[0];
+      // turn on segments according to content of stack
+      buf[0] = stackA ? buf[0] | SEGPART_4 : buf[0] & ~SEGPART_4;
+      buf[0] = stackB ? buf[0] | SEGPART_5 : buf[0] & ~SEGPART_5;
+      buf[0] = altMode ? buf[0] | SEGPART_7 : buf[0] & ~SEGPART_7;
 
       sendByte(0x88);
       sendBuffer(buf);
    }
 }
 
-// ISR with TIMER1_OVF_vect
-// this ISR runs when the timer counter overflows
-// the timer overflows whenever it counts down to INTPER from 2^16
-ISR (TIMER1_OVF_vect) {
-   blink ^= (1 << 7);
-   TCNT1 = INTPER; // 15.8 us for 8MHz clock
-}
+// // ISR with TIMER1_OVF_vect
+// // this ISR runs when the timer counter overflows
+// // the timer overflows whenever it counts down to INTPER from 2^16
+// ISR (TIMER1_OVF_vect) {
+//    blink ^= (1 << 7);
+//    TCNT1 = INTPER; // 15.8 us for 8MHz clock
+// }
 
 // general setup code
 void setup() {
@@ -98,18 +117,17 @@ void setup() {
    reset();
 }
 
-// interrupt setup code
-void intSetup() {
-   TCNT1 = INTPER;         // counter starts at overflow value
-   TCCR1A = 0x00;          // counter normal mode
-   TCCR1B = (1 << CS11);   // enable pre-scaler (F_CPU/8)
-   TIMSK1 = (1 << TOIE1);  // enable interrupt trigger on overflow
-   sei();                  // global interrupt enable
-}
+// // interrupt setup code
+// void intSetup() {
+//    TCNT1 = INTPER;         // counter starts at overflow value
+//    TCCR1A = 0x00;          // counter normal mode
+//    TCCR1B = (1 << CS11);   // enable pre-scaler (F_CPU/8)
+//    TIMSK1 = (1 << TOIE1);  // enable interrupt trigger on overflow
+//    sei();                  // global interrupt enable
+// }
 
-// take arrays rb and b and int n, look at what rb is and
-// change b accordingly
-void parseInput(uint32_t keys, uint8_t *b, int *n) {
+// put all four bytes of key matrix input into a 32-bit integer
+void parseInput(uint32_t keys, uint8_t *b) {
    int nextSeg = 0;
    int isNumber = 0;
    switch (keys) {
@@ -157,10 +175,9 @@ void parseInput(uint32_t keys, uint8_t *b, int *n) {
          stackInsert(b);
          break;
       case NP_NUM:
+         altMode = altMode ? 0 : altMode;
          if (b[7]) {
-            for (int i = 0; i < 8; i++) {
-               b[i] = 0;
-            }
+            clearBuffer(b);
          } else {
             stackA = 0;
             stackB = 0;
@@ -169,6 +186,9 @@ void parseInput(uint32_t keys, uint8_t *b, int *n) {
          break;
       case NP_ADD:
          calcFuncAdd(b);
+         break;
+      case NP_SUB:
+         calcFuncSub(b);
          break;
       case NP_DEC:
          b[7] |= SEGPART_7;
@@ -192,7 +212,7 @@ void clearBuffer(uint8_t *buf) {
 }
 
 void stackInsert(uint8_t *buf) {
-   int currentNumber = parseDisplay(buf);
+   int64_t currentNumber = parseDisplay(buf);
    if (stackA) {
       stackB = stackA;
       stackA = currentNumber;
@@ -203,18 +223,36 @@ void stackInsert(uint8_t *buf) {
 }
 
 void calcFuncAdd(uint8_t *buf) {
-   uint64_t res = 0;
+   int64_t res = 0;
    if(!buf[7]) {
-     res = stackB + stackA; 
-     stackB = 0;
-     stackA = res;
+      res = stackB + stackA; 
+      stackB = 0;
+      stackA = res;
+   } else {
+      res = stackA + parseDisplay(buf);
+      stackA = res;
    }
    clearBuffer(buf);
    putToBuffer(buf, res);
 }
 
-int whatNumberIsThis(uint8_t bufseg) {
-   switch (bufseg) {
+void calcFuncSub(uint8_t *buf) {
+   int64_t res = 0;
+   if(!buf[7]) {
+      res = stackB - stackA; 
+      stackB = 0;
+      stackA = res;
+   } else {
+      res = stackA - parseDisplay(buf);
+      stackA = res;
+   }
+   clearBuffer(buf);
+   putToBuffer(buf, res);
+}
+
+// takes a seven segment display character and returns the number it represents
+int segToNum(uint8_t seg) {
+   switch (seg) {
       case SEG_0:
          return 0;
          break;
@@ -251,8 +289,8 @@ int whatNumberIsThis(uint8_t bufseg) {
    }
 }
 
-// takes an int and returns the seven segment representation
-uint8_t whatCharacterIsThis(int n) {
+// takes an int and returns its seven segment representation
+uint8_t numToSeg(int n) {
    switch (n) {
       case 0:
          return SEG_0;
@@ -290,19 +328,21 @@ uint8_t whatCharacterIsThis(int n) {
    }
 }
 
-uint64_t parseDisplay(uint8_t *buf) {
-   uint64_t temp = 0;
+// takes the display buffer and converts its contents into a single number
+int64_t parseDisplay(uint8_t *buf) {
+   int64_t temp = 0;
    for (int seg = 7; seg > 1; seg--) {
       if (buf[seg] != 0x00) {
-         temp += whatNumberIsThis(buf[seg]) * pow(10, 7 - seg);
+         temp += segToNum(buf[seg]) * pow(10, 7 - seg);
       }
    }
    return temp;
 }
 
-int numberAtPos(uint64_t number, int pos) {
-   uint64_t temp = 0;
-   uint64_t mulBy = 1;
+// returns the number at the specified place value
+int numberAtPos(int64_t number, int pos) {
+   int64_t temp = 0;
+   int64_t mulBy = 1;
    for (int ex = 0; ex < pos; ex++) {
       mulBy *= 10;
    }
@@ -311,9 +351,10 @@ int numberAtPos(uint64_t number, int pos) {
    return (int) temp;
 }
 
-void putToBuffer(uint8_t *buf, uint64_t i) {
+// takes a number i and puts it onto the buffer
+void putToBuffer(uint8_t *buf, int64_t i) {
    for (int seg = 7; seg > 0; seg--) {
-      buf[seg] = whatCharacterIsThis(numberAtPos(i,7 - seg));
+      buf[seg] = numToSeg(numberAtPos(i,7 - seg));
    }
    for (int seg = 1; seg < 7; seg++) {
       if (buf[seg] == SEG_0) {
