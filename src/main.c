@@ -127,19 +127,19 @@ void parse(unsigned char *readbuf, unsigned char *b, int *n) {
    }
 }
 
-// shifts out cmd (MSB first), where nbits is length of cmd
-// without affecting STB
-void shiftout(int nbits, unsigned char cmd) {
-   for (int cbit = 0; cbit < nbits; cbit++) {
-      PORTD ^= (1 << CLK); // toggle CLK (low)
-      PORTD &= ~(1 << DIO); // reset DIO
-      PORTD |= (((cmd & (1<< cbit)) >> cbit) << DIO);
-      // create 8 bit mask with lsb set, shift that bit left "cbit" times
-      // AND with cmd to get the bit of interest
-      // shift extracted bit back to LSB to "reset" position
-      // shift bit left to line up with DIO
+// shifts out cmd (LSB first), where bits is length of cmd (in bits)
+// does not affect STB
+// this is OK
+void shiftOut(int bits, unsigned char cmd) {
+   DDRD |= (1 << DIO);                       // configure DIO as output
+   for (int bit = 0; bit < bits; bit++) {
+      PORTD &= ~((1 << DIO) | (1 << CLK));   // clear CLK and DIO
+                                             
+      // mask out relevant bit, reduce to 0 or 1 with !!, shift bit to line up with DIO
+      PORTD |= (!!(cmd & (1 << bit)) << DIO);
+
       _delay_us(DTIME);
-      PORTD ^= (1 << CLK); // toggle CLK (high)
+      PORTD |= (1 << CLK);                   // set CLK (high), clock out the bit
       _delay_us(DTIME);
    }
 }
@@ -149,7 +149,7 @@ void readbytes(unsigned char *readbuf) {
    DDRD = 0b11100000; // set PORTD5 to PORTD7 as output
    PORTD &= ~(1 << STB); // bring STB low
    _delay_us(DTIME);
-   shiftout(8, 0x42);
+   shiftOut(8, 0x42);
    PORTD &= ~(1 << DIO); // reset DIO
    DDRD = 0b11000000;
    for (int cyc = 0; cyc < 4; cyc++) {
@@ -169,14 +169,14 @@ void readbytes(unsigned char *readbuf) {
 
 void sendbyte(unsigned char b) {
    PORTD &= ~(1 << STB); // bring STB low
-   shiftout(8, b);
+   shiftOut(8, b);
    PORTD |= (1 << STB); // bring STB high
 }
 
 void sendbuf(unsigned char *buf) {
    sendbyte(0x40); // set auto increment mode
    PORTD &= ~(1<<STB); // bring STB low
-   shiftout(8, 0xC0);
+   shiftOut(8, 0xC0);
    for (int bit = 0; bit < 8; bit++) {
       // send data to register
       for (int digit = 0; digit < 8; digit++) {
@@ -192,7 +192,7 @@ void sendbuf(unsigned char *buf) {
          _delay_us(DTIME);
       }
       // fill up every other register with zeroes
-      shiftout(8, 0);
+      shiftOut(8, 0);
    }
    PORTD |= (1<<STB); // bring STB high
 }
