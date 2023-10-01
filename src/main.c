@@ -40,7 +40,8 @@ volatile uint8_t blink = (1 << 7);
 const uint8_t zeroes[8] = { 0 };
 
 int main (void) {
-   uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
+   // uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
+   uint8_t buf[8] = { 0 };
    uint32_t keyStates = 0;
    int next = 1;
    uint32_t prevKeys = 0;
@@ -50,7 +51,7 @@ int main (void) {
       sendByte(0x33); // meaningless data for trigger on logic analyzer
       prevKeys = keyStates;
       readBytes(&keyStates);
-      if (prevKeys != keyStates) {
+      if ((prevKeys != keyStates) && (prevKeys == 0x00)) {
          parse(keyStates, buf, &next);
       }
 
@@ -88,37 +89,37 @@ void intSetup() {
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
 void parse(uint32_t keys, uint8_t *b, int *n) {
-
+   int nextSeg = 0;
    switch (keys) {
       case NP_0:
-         b[7] = SEG_0;
+         nextSeg = SEG_0;
          break;
       case NP_1:
-         b[7] = SEG_1;
+         nextSeg = SEG_1;
          break;
       case NP_2:
-         b[7] = SEG_2;
+         nextSeg = SEG_2;
          break;
       case NP_3:
-         b[7] = SEG_3;
+         nextSeg = SEG_3;
          break;
       case NP_4:
-         b[7] = SEG_4;
+         nextSeg = SEG_4;
          break;
       case NP_5:
-         b[7] = SEG_5;
+         nextSeg = SEG_5;
          break;
       case NP_6:
-         b[7] = SEG_6;
+         nextSeg = SEG_6;
          break;
       case NP_7:
-         b[7] = SEG_7;
+         nextSeg = SEG_7;
          break;
       case NP_8:
-         b[7] = SEG_8;
+         nextSeg = SEG_8;
          break;
       case NP_9:
-         b[7] = SEG_9;
+         nextSeg = SEG_9;
          break;
       case NP_ENT:
          for (int x = 0; x < 8; x++) {
@@ -134,14 +135,16 @@ void parse(uint32_t keys, uint8_t *b, int *n) {
          b[7] = b[7];
          break;
    }
-
+   for (int n = 0; n < 7; n++) {
+      b[n] = b[n+1];
+   }
+   b[7] = nextSeg;
 }
 
 // shifts out cmd (LSB first), where bits is length of cmd (in bits)
 // does not affect STB
 // this is OK
 void shiftOut(int bits, uint8_t cmd) {
-
    DDRD |= (1 << DIO);                       // configure DIO as output
    for (int bit = 0; bit < bits; bit++) {
       PORTD &= ~((1 << DIO) | (1 << CLK));   // clear CLK and DIO
@@ -153,11 +156,9 @@ void shiftOut(int bits, uint8_t cmd) {
       PORTD |= (1 << CLK);                   // set CLK (high), clock out the bit
       _delay_us(DTIME);
    }
-
 }
 
 void readBytes(uint32_t *keys) {
-
    *keys = 0;              // clear last read key state
    DDRD = SPIALL;          // set all SPI pins to output
    PORTD &= ~(1 << STB);   // clear STB (begin transmission)
@@ -175,21 +176,17 @@ void readBytes(uint32_t *keys) {
    }
    PORTD |= (1 << STB);    // set STB (end transmission)
    _delay_us(DTIME);
-
 }
 
 // send a command byte
 void sendByte(uint8_t b) {
-
    PORTD &= ~(1 << STB); // bring STB low
    shiftOut(8, b);
    PORTD |= (1 << STB); // bring STB high
-
 }
 
 // send buffer array consisting of characters to display
 void sendBuffer(uint8_t *buf) {
-
    sendByte(0x40);               // send command to set auto increment mode
    PORTD &= ~(1 << STB);         // clear STB (begin conversation)
    shiftOut(8, 0xC0);            // send command to set start address at 0x00
