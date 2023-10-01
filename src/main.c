@@ -52,16 +52,17 @@ void calcFuncDiv(uint8_t*);
 
 // global variables
 volatile uint8_t blink = (1 << 7);
-const uint8_t zeroes[8] = { 0 };
 uint8_t altMode = 0;
+
+// constants
+const uint8_t zeroes[8] = { 0 };
+uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
 
 // the STACK
 int64_t stackA = 0;
 int64_t stackB = 0;
 
 int main (void) {
-   // startup banner
-   uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
    uint8_t buf[8] = { 0 };
    uint32_t keyStates = 0;
    uint32_t prevKeys = 0;
@@ -188,6 +189,12 @@ void parseInput(uint32_t keys, uint8_t *b) {
          calcFuncAdd(b);
          break;
       case NP_SUB:
+         // code for testing alternate key mode
+         if (altMode) {
+            clearBuffer(b);
+            altMode = 0;
+            break;
+         }
          calcFuncSub(b);
          break;
       case NP_MUL:
