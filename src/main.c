@@ -68,6 +68,7 @@ int main (void) {
    uint32_t prevKeys = 0;
    setup();
    //   intSetup();
+   sendBuffer(buf);
    sendBuffer(startup); // comment this out to disable startup message
    _delay_ms(1000);
    while(1) {
@@ -99,7 +100,6 @@ int main (void) {
       buf[0] = stackB ? buf[0] | SEGPART_5 : buf[0] & ~SEGPART_5;
       buf[0] = altMode ? buf[0] | SEGPART_7 : buf[0] & ~SEGPART_7;
 
-      sendByte(0x88);
       sendBuffer(buf);
    }
 }
@@ -116,6 +116,7 @@ int main (void) {
 void setup() {
    DDRD = SPIALL;
    reset();
+   sendByte(0x88);
 }
 
 // // interrupt setup code
