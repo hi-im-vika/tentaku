@@ -30,7 +30,7 @@ void reset();
 const uint8_t zeroes[8] = { 0 };
 void sendByte(uint8_t);
 void readbytes(uint8_t*);
-void sendbuf(uint8_t*);
+void sendBuffer(uint8_t*);
 void parse(uint8_t*, uint8_t*, int*);
 void intSetup();
 
@@ -53,7 +53,7 @@ int main (void) {
       // blink based on interrupt clock cycle
       
       sendByte(0x88);
-      sendbuf(buf);
+      sendBuffer(buf);
    }
 
    //  scrolling code
@@ -67,7 +67,7 @@ int main (void) {
    //         }
    //         buf[7] = pushed;
    //         _delay_ms(100);
-   //         sendbuf(buf);
+   //         sendBuffer(buf);
    //      }
    //   }
 }
@@ -168,36 +168,45 @@ void readbytes(uint8_t *readbuf) {
    DDRD = oldstate;
 }
 
+// send a command byte
 void sendByte(uint8_t b) {
    PORTD &= ~(1 << STB); // bring STB low
    shiftOut(8, b);
    PORTD |= (1 << STB); // bring STB high
 }
 
-void sendbuf(uint8_t *buf) {
-   sendByte(0x40); // set auto increment mode
-   PORTD &= ~(1<<STB); // bring STB low
-   shiftOut(8, 0xC0);
+
+// send buffer array consisting of characters to display
+void sendBuffer(uint8_t *buf) {
+
+   sendByte(0x40);               // send command to set auto increment mode
+   PORTD &= ~(1 << STB);         // clear STB (begin conversation)
+   shiftOut(8, 0xC0);            // send command to set start address at 0x00
+                                 
+   // iterate through buffer
    for (int bit = 0; bit < 8; bit++) {
-      // send data to register
-      for (int digit = 0; digit < 8; digit++) {
-         PORTD ^= (1<<CLK); // toggle CLK (low)
+
+      // send info for entire character
+      for (int chr = 0; chr < 8; chr++) {
+         PORTD &= ~(1 << CLK);   // clear CLK
          _delay_us(DTIME);
-         PORTD &= ~(1<<DIO); // reset DIO
-         PORTD |= (((buf[digit] & (1<<bit)) >> bit)<<DIO);
-         // create 8 bit mask with lsb set, shift that bit left "bit" times
-         // AND with the current digit to get the bit of interest
-         // shift extracted bit back to LSB to "reset" position
-         // shift bit left to line up with DIO
-         PORTD ^= (1<<CLK); // toggle CLK (high)
+         PORTD &= ~(1 << DIO);   // clear DIO, prepare for data output
+
+         // mask out relevant bit, reduce to 0 or 1 with !!, shift bit to line up with DIO
+         PORTD |= (!!(buf[chr] & (1 << bit)) << DIO);
+
+         PORTD ^= (1 << CLK);    // set CLK (clock out bit)
          _delay_us(DTIME);
       }
-      // fill up every other register with zeroes
+
+      // fill every second register with zeroes
+      // (every second register is unused)
       shiftOut(8, 0);
    }
-   PORTD |= (1<<STB); // bring STB high
+   PORTD |= (1 << STB);          // set STB (end conversation)
 }
 
+// reset CLK and STB states
 void reset() {
-   PORTD |= ((1<<CLK) | (1<<STB)); // bring CLK and STB high
+   PORTD |= ((1 << CLK) | (1 << STB)); // set CLK and STB
 }
