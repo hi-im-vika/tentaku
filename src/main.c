@@ -71,6 +71,7 @@ int main (void) {
    //      }
    //   }
 }
+
 // ISR with TIMER1_OVF_vect
 // this ISR runs when the timer counter overflows
 // the timer overflows whenever it counts down to INTPER from 2^16
@@ -81,11 +82,11 @@ ISR (TIMER1_OVF_vect) {
 
 // interrupt setup code
 void intSetup() {
-   TCNT1 = INTPER; // 15.8 us for 8MHz clock
-   TCCR1A = 0x00; // Set normal counter mode
-   TCCR1B = (1 << CS11); // Set 8 pre-scaler
-   TIMSK1 = (1 << TOIE1); // Set overflow interrupt enable bit
-   sei(); // Enable interrupts globally
+   TCNT1 = INTPER;         // counter starts at overflow value
+   TCCR1A = 0x00;          // counter normal mode
+   TCCR1B = (1 << CS11);   // enable pre-scaler (F_CPU/8)
+   TIMSK1 = (1 << TOIE1);  // enable interrupt trigger on overflow
+   sei();                  // global interrupt enable
 }
 
 // take arrays rb and b and int n, look at what rb is and
