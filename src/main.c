@@ -52,21 +52,23 @@ void calcFuncDiv(uint8_t*);
 
 // global variables
 volatile uint8_t blink = (1 << 7);
-const uint8_t zeroes[8] = { 0 };
 uint8_t altMode = 0;
+
+// constants
+const uint8_t zeroes[8] = { 0 };
+uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
 
 // the STACK
 int64_t stackA = 0;
 int64_t stackB = 0;
 
 int main (void) {
-   // startup banner
-   uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
    uint8_t buf[8] = { 0 };
    uint32_t keyStates = 0;
    uint32_t prevKeys = 0;
    setup();
    //   intSetup();
+   sendBuffer(buf);
    sendBuffer(startup); // comment this out to disable startup message
    _delay_ms(1000);
    while(1) {
@@ -98,7 +100,6 @@ int main (void) {
       buf[0] = stackB ? buf[0] | SEGPART_5 : buf[0] & ~SEGPART_5;
       buf[0] = altMode ? buf[0] | SEGPART_7 : buf[0] & ~SEGPART_7;
 
-      sendByte(0x88);
       sendBuffer(buf);
    }
 }
@@ -115,6 +116,7 @@ int main (void) {
 void setup() {
    DDRD = SPIALL;
    reset();
+   sendByte(0x88);
 }
 
 // // interrupt setup code
@@ -188,7 +190,19 @@ void parseInput(uint32_t keys, uint8_t *b) {
          calcFuncAdd(b);
          break;
       case NP_SUB:
+         // code for testing alternate key mode
+         if (altMode) {
+            clearBuffer(b);
+            altMode = 0;
+            break;
+         }
          calcFuncSub(b);
+         break;
+      case NP_MUL:
+         calcFuncMul(b);
+         break;
+      case NP_DIV:
+         calcFuncDiv(b);
          break;
       case NP_DEC:
          b[7] |= SEGPART_7;
@@ -198,7 +212,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          break;
    }
    if (isNumber) {
-      for (int n = 0; n < 7; n++) {
+      for (int n = 1; n < 7; n++) {
          b[n] = b[n+1];
       }
       b[7] = nextSeg;
@@ -244,6 +258,34 @@ void calcFuncSub(uint8_t *buf) {
       stackA = res;
    } else {
       res = stackA - parseDisplay(buf);
+      stackA = res;
+   }
+   clearBuffer(buf);
+   putToBuffer(buf, res);
+}
+
+void calcFuncMul(uint8_t *buf) {
+   int64_t res = 0;
+   if(!buf[7]) {
+      res = stackB * stackA; 
+      stackB = 0;
+      stackA = res;
+   } else {
+      res = stackA * parseDisplay(buf);
+      stackA = res;
+   }
+   clearBuffer(buf);
+   putToBuffer(buf, res);
+}
+
+void calcFuncDiv(uint8_t *buf) {
+   int64_t res = 0;
+   if(!buf[7]) {
+      res = stackB / stackA; 
+      stackB = 0;
+      stackA = res;
+   } else {
+      res = stackA / parseDisplay(buf);
       stackA = res;
    }
    clearBuffer(buf);
