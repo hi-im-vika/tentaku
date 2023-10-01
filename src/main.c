@@ -138,10 +138,22 @@ void parseInput(uint32_t keys, uint8_t *b) {
          nextSeg = SEG_0;
          break;
       case NP_1:
+         if (altMode) {
+            clearBuffer(b);
+            putToBuffer(b, stackA);
+            altMode = 0;
+            break;
+         }
          isNumber = 1;
          nextSeg = SEG_1;
          break;
       case NP_2:
+         if (altMode) {
+            clearBuffer(b);
+            putToBuffer(b, stackB);
+            altMode = 0;
+            break;
+         }
          isNumber = 1;
          nextSeg = SEG_2;
          break;
