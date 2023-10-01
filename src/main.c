@@ -23,7 +23,7 @@
 #define DTIME 5
 
 // #define INTPER 65523 // through trial and error, this one is about 32 kHz
-                     // about 15 us of thinking time !
+// about 15 us of thinking time !
 #define INTPER 1
 
 void reset();
@@ -31,27 +31,26 @@ const uint8_t zeroes[8] = { 0 };
 void sendByte(uint8_t);
 void readbytes(uint8_t*);
 void sendBuffer(uint8_t*);
-void parse(uint8_t*, uint8_t*, int*);
+void readBytes(uint32_t*);
+void parse(uint32_t, uint8_t*, int*);
 void intSetup();
 
 uint8_t tog = (1 << 7);
 
 int main (void) {
-   uint8_t buf[8] = { chars[1], chars[2], chars[3], chars[4], chars[10], chars[11], chars[12], chars[13], };
-   uint8_t readbuf[4] = { 0 };
-   uint8_t readbuft[4] = { 0 };
+   uint8_t buf[8] = { SEG_1, SEG_2, SEG_3, SEG_4, SEG_A, SEG_B, SEG_C, SEG_D };
+   uint32_t keyStates = 0;
    int next = 1;
    intSetup();
    while(1) {
       DDRD = SPIALL;
       reset();
-      readbytes(readbuf);
-      readbytes(readbuft);
-      parse(readbuf, buf, &next);
+      readBytes(&keyStates);
+      parse(keyStates, buf, &next);
 
       buf[0] = (buf[0] & (((uint8_t) -1) >> 1)) | tog;
       // blink based on interrupt clock cycle
-      
+
       sendByte(0x88);
       sendBuffer(buf);
    }
@@ -91,40 +90,22 @@ void intSetup() {
 
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
-void parse(uint8_t *readbuf, uint8_t *b, int *n) {
-   if (readbuf[0] == 0b00000100) {            // 0 pressed
-      b[7] = chars[0];
-   } else if (readbuf[2] == 0b00100000) {     // 1 pressed
-      b[7] = chars[1];
-   } else if (readbuf[3] == 0b00000010) {     // 2 pressed
-      b[7] = chars[2];
-   } else if (readbuf[3] == 0b00100000) {     // 3 pressed
-      b[7] = chars[3];
-   } else if (readbuf[1] == 0b00000010) {     // 4 pressed
-      b[7] = chars[4];
-   } else if (readbuf[1] == 0b00100000) {     // 5 pressed
-      b[7] = chars[5];
-   } else if (readbuf[2] == 0b00000010) {     // 6 pressed
-      b[7] = chars[6];
-   } else if (readbuf[3] == 0b01000000) {     // 7 pressed
-      b[7] = chars[7];
-   } else if (readbuf[0] == 0b00000010) {     // 8 pressed
-      b[7] = chars[8];
-   } else if (readbuf[0] == 0b00100000) {     // 9 pressed
-      b[7] = chars[9];
-   } else if (readbuf[0] == 0b00000001) {     // . pressed
-      b[7] = 0b10000000;
-   } else if (readbuf[1] == 0b00000100) {     // ENTER pressed
-      if ((*n)++ > 8) {
-         *n = 1;
-      }
-      b[*n] = b[7];
-   } else if (readbuf[1] == 0b01000000) {     // NUMLOCK pressed
-      for (int i = 0; i < 8; i++) {
-         b[i] = 0;
-      }
-   } else {
-      b[7] = b[7];
+void parse(uint32_t keys, uint8_t *b, int *n) {
+   switch (keys) {
+      case NP_ENT:
+         if ((*n)++ > 8) {
+            *n = 1;
+         }
+         b[*n] = b[7];
+         break;
+      case NP_NUM:
+         for (int i = 0; i < 8; i++) {
+            b[i] = 0;
+         }
+         break;
+      default:
+         b[7] = b[7];
+         break;
    }
 }
 
@@ -135,7 +116,7 @@ void shiftOut(int bits, uint8_t cmd) {
    DDRD |= (1 << DIO);                       // configure DIO as output
    for (int bit = 0; bit < bits; bit++) {
       PORTD &= ~((1 << DIO) | (1 << CLK));   // clear CLK and DIO
-                                             
+
       // mask out relevant bit, reduce to 0 or 1 with !!, shift bit to line up with DIO
       PORTD |= (!!(cmd & (1 << bit)) << DIO);
 
@@ -143,6 +124,26 @@ void shiftOut(int bits, uint8_t cmd) {
       PORTD |= (1 << CLK);                   // set CLK (high), clock out the bit
       _delay_us(DTIME);
    }
+}
+
+void readBytes(uint32_t *keys) {
+   *keys = 0;              // clear last read key state
+   DDRD = SPIALL;          // set all SPI pins to output
+   PORTD &= ~(1 << STB);   // clear STB (begin transmission)
+   _delay_us(DTIME);
+   shiftOut(8, 0x42);      // send read command
+   PORTD &= ~(1 << DIO);   // clear DIO
+   DDRD &= ~(1 << DIO);    // set DIO to input
+                           // read in 32 bits
+   for (int bit = 0; bit < 32; bit++) {
+      PORTD &= ~(1 << CLK);   // clear CLK
+      _delay_us(DTIME);
+      PORTD |= (1 << CLK);    // set CLK (read single bit)
+      *keys |= (((uint32_t) !!(PIND & (1 << DIO))) << bit); // check DIO and set corresponding bit in integer
+      _delay_us(DTIME);
+   }
+   PORTD |= (1 << STB);    // set STB (end transmission)
+   _delay_us(DTIME);
 }
 
 void readbytes(uint8_t *readbuf) {
@@ -182,7 +183,7 @@ void sendBuffer(uint8_t *buf) {
    sendByte(0x40);               // send command to set auto increment mode
    PORTD &= ~(1 << STB);         // clear STB (begin conversation)
    shiftOut(8, 0xC0);            // send command to set start address at 0x00
-                                 
+
    // iterate through buffer
    for (int bit = 0; bit < 8; bit++) {
 
