@@ -146,7 +146,7 @@ void parseInput(uint32_t keys, uint8_t *b, int *n) {
          }
          break;
       case NP_DEC:
-         b[7] |= 0x80;
+         b[7] |= SEGPART_7;
          break;
       default:
          b[7] = b[7];
