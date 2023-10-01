@@ -9,6 +9,7 @@
 // vika
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -25,19 +26,19 @@
 #define INTPER 1
 
 void reset();
-const unsigned char zeroes[8] = { 0 };
-void sendbyte(unsigned char);
-void readbytes(unsigned char*);
-void sendbuf(unsigned char*);
-void parse(unsigned char*, unsigned char*, int*);
+const uint8_t zeroes[8] = { 0 };
+void sendbyte(uint8_t);
+void readbytes(uint8_t*);
+void sendbuf(uint8_t*);
+void parse(uint8_t*, uint8_t*, int*);
 void intsetup();
 
-unsigned char tog = (1 << 7);
+uint8_t tog = (1 << 7);
 
 int main (void) {
-   unsigned char buf[8] = { chars[1], chars[2], chars[3], chars[4], chars[10], chars[11], chars[12], chars[13], };
-   unsigned char readbuf[4] = { 0 };
-   unsigned char readbuft[4] = { 0 };
+   uint8_t buf[8] = { chars[1], chars[2], chars[3], chars[4], chars[10], chars[11], chars[12], chars[13], };
+   uint8_t readbuf[4] = { 0 };
+   uint8_t readbuft[4] = { 0 };
    int next = 1;
    intsetup();
    while(1) {
@@ -47,7 +48,7 @@ int main (void) {
       readbytes(readbuft);
       parse(readbuf, buf, &next);
 
-      buf[0] = (buf[0] & (((unsigned char) -1) >> 1)) | tog;
+      buf[0] = (buf[0] & (((uint8_t) -1) >> 1)) | tog;
       // blink based on interrupt clock cycle
       
       sendbyte(0x88);
@@ -57,9 +58,9 @@ int main (void) {
    //  scrolling code
    //
    //   while(1) {
-   //      unsigned char readbuf = 0;
+   //      uint8_t readbuf = 0;
    //      for (int a = 0; a < 8; a++) {
-   //         unsigned char pushed = buf[0];
+   //         uint8_t pushed = buf[0];
    //         for (int x = 0; x < 8; x++) {
    //            buf[x] = buf[x+1];
    //         }
@@ -90,7 +91,7 @@ void intsetup() {
 
 // take arrays rb and b and int n, look at what rb is and
 // change b accordingly
-void parse(unsigned char *readbuf, unsigned char *b, int *n) {
+void parse(uint8_t *readbuf, uint8_t *b, int *n) {
    if (readbuf[0] == 0b00000100) {            // 0 pressed
       b[7] = chars[0];
    } else if (readbuf[2] == 0b00100000) {     // 1 pressed
@@ -130,7 +131,7 @@ void parse(unsigned char *readbuf, unsigned char *b, int *n) {
 // shifts out cmd (LSB first), where bits is length of cmd (in bits)
 // does not affect STB
 // this is OK
-void shiftOut(int bits, unsigned char cmd) {
+void shiftOut(int bits, uint8_t cmd) {
    DDRD |= (1 << DIO);                       // configure DIO as output
    for (int bit = 0; bit < bits; bit++) {
       PORTD &= ~((1 << DIO) | (1 << CLK));   // clear CLK and DIO
@@ -144,8 +145,8 @@ void shiftOut(int bits, unsigned char cmd) {
    }
 }
 
-void readbytes(unsigned char *readbuf) {
-   unsigned char oldstate = DDRD;
+void readbytes(uint8_t *readbuf) {
+   uint8_t oldstate = DDRD;
    DDRD = 0b11100000; // set PORTD5 to PORTD7 as output
    PORTD &= ~(1 << STB); // bring STB low
    _delay_us(DTIME);
@@ -167,13 +168,13 @@ void readbytes(unsigned char *readbuf) {
    DDRD = oldstate;
 }
 
-void sendbyte(unsigned char b) {
+void sendbyte(uint8_t b) {
    PORTD &= ~(1 << STB); // bring STB low
    shiftOut(8, b);
    PORTD |= (1 << STB); // bring STB high
 }
 
-void sendbuf(unsigned char *buf) {
+void sendbuf(uint8_t *buf) {
    sendbyte(0x40); // set auto increment mode
    PORTD &= ~(1<<STB); // bring STB low
    shiftOut(8, 0xC0);
