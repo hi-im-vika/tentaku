@@ -51,12 +51,13 @@ void calcFuncMul(uint8_t*);
 void calcFuncDiv(uint8_t*);
 
 // global variables
-volatile uint8_t blink = (1 << 7);
+// volatile uint8_t blink = (1 << 7);
 uint8_t altMode = 0;
 
 // constants
 const uint8_t zeroes[8] = { 0 };
-uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
+// uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
+uint8_t startup[8] = { 0b01010000, 0b01110011, 0b01010100, SEG_C, SEG_A, 0b00111000, SEG_C, 0 };   // rPnCALC
 
 // the STACK
 int64_t stackA = 0;
