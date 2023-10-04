@@ -65,8 +65,8 @@ int64_t stackB = 0;
 
 int main (void) {
    uint8_t buf[8] = { 0 };
-   uint32_t keyStates = 0;
-   uint32_t prevKeys = 0;
+   uint32_t keyStates = 0;    // 32-bit integer to store current keys pressed
+   uint32_t prevKeys = 0;     // 32-bit integer to store last keys pressed
    setup();
    //   intSetup();
    sendBuffer(buf);
@@ -76,7 +76,7 @@ int main (void) {
       sendByte(0x33); // meaningless data for trigger on logic analyzer
       prevKeys = keyStates; // edge detector or something
       readBytes(&keyStates);
-      if((prevKeys != keyStates) && (prevKeys == 0x00)) {
+      if((prevKeys != keyStates) && (prevKeys == 0x00)) {   // if current keys pressed not equal to last keys pressed
          if(keyStates & NP_NUM) {                  // if numlock is pressed
             int ctr = 0;
             while(keyStates & NP_NUM) {
