@@ -34,7 +34,7 @@ void reset();
 void sendByte(uint8_t);
 void sendBuffer(uint8_t*);
 void readBytes(uint32_t*);
-void parseInput(uint32_t, uint8_t*);
+void parseInput(uint32_t, uint8_t*, uint8_t*, int64_t*, int64_t*);
 int segToNum(uint8_t);
 uint8_t numToSeg(int);
 int64_t parseDisplay(uint8_t*);
@@ -42,28 +42,32 @@ void putToBuffer(uint8_t*, int64_t);
 void clearBuffer(uint8_t*);
 
 // stack manipulation
-void stackInsert(uint8_t*);
+void stackInsert(uint8_t*, int64_t*, int64_t*);
 
 // calculator functions
-void calcFuncAdd(uint8_t*);
-void calcFuncSub(uint8_t*);
-void calcFuncMul(uint8_t*);
-void calcFuncDiv(uint8_t*);
+void calcFuncAdd(uint8_t*, int64_t*, int64_t*);
+void calcFuncSub(uint8_t*, int64_t*, int64_t*);
+void calcFuncMul(uint8_t*, int64_t*, int64_t*);
+void calcFuncDiv(uint8_t*, int64_t*, int64_t*);
 
 // global variables
 // volatile uint8_t blink = (1 << 7);
-uint8_t altMode = 0;
 
 // constants
 const uint8_t zeroes[8] = { 0 };
 // uint8_t startup[8] = { SEG_A, 0b01110100, 0b01010000, 0b00110000, SEG_C, SEG_A, 0b00111000, SEG_C };
 uint8_t startup[8] = { 0b01010000, 0b01110011, 0b01010100, SEG_C, SEG_A, 0b00111000, SEG_C, 0 };   // rPnCALC
 
-// the STACK
-int64_t stackA = 0;
-int64_t stackB = 0;
 
 int main (void) {
+   
+   // altmode indicator
+   uint8_t altMode = 0;
+
+   // the STACK
+   int64_t stackA = 0;
+   int64_t stackB = 0;
+
    uint8_t buf[8] = { 0 };
    uint32_t keyStates = 0;    // 32-bit integer to store current keys pressed
    uint32_t prevKeys = 0;     // 32-bit integer to store last keys pressed
@@ -89,10 +93,10 @@ int main (void) {
                sendBuffer(buf);                    // force refresh display buffer
             } else {
                keyStates |= NP_NUM;                // key not held for long enough, default action
-               parseInput(keyStates, buf);         // pass keyStates with button pressed to parseInput
+               parseInput(keyStates, buf, &altMode, &stackA, &stackB);         // pass keyStates with button pressed to parseInput
             }
          } else {
-            parseInput(keyStates, buf);
+            parseInput(keyStates, buf, &altMode, &stackA, &stackB);
          }
       }
 
@@ -130,7 +134,12 @@ void setup() {
 // }
 
 // put all four bytes of key matrix input into a 32-bit integer
-void parseInput(uint32_t keys, uint8_t *b) {
+// uint32_t    keys        integer with keys pressed
+// uint8_t     *b          pointer to display buffer
+// uint8_t     *altMode    pointer to altMode indicator
+// int64_t     *stackA     signed integer for stack A contents
+// int64_t     *stackB     signed integer for stack B contents
+void parseInput(uint32_t keys, uint8_t *b, uint8_t *altMode, int64_t *stackA, int64_t *stackB) {
    int nextSeg = 0;
    int isNumber = 0;
    switch (keys) {
@@ -142,7 +151,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          // show contents of stackA
          if (altMode) {
             clearBuffer(b);
-            putToBuffer(b, stackA);
+            putToBuffer(b, *stackA);
             altMode = 0;
             break;
          }
@@ -153,7 +162,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          // show contents of stackB
          if (altMode) {
             clearBuffer(b);
-            putToBuffer(b, stackB);
+            putToBuffer(b, *stackB);
             altMode = 0;
             break;
          }
@@ -189,7 +198,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          nextSeg = SEG_9;
          break;
       case NP_ENT:
-         stackInsert(b);
+         stackInsert(b, stackA, stackB);
          break;
       case NP_NUM:
          altMode = altMode ? 0 : altMode;
@@ -202,7 +211,7 @@ void parseInput(uint32_t keys, uint8_t *b) {
          }
          break;
       case NP_ADD:
-         calcFuncAdd(b);
+         calcFuncAdd(b, stackA, stackB);
          break;
       case NP_SUB:
          // code for testing alternate key mode
@@ -211,13 +220,13 @@ void parseInput(uint32_t keys, uint8_t *b) {
             altMode = 0;
             break;
          }
-         calcFuncSub(b);
+         calcFuncSub(b, stackA, stackB);
          break;
       case NP_MUL:
-         calcFuncMul(b);
+         calcFuncMul(b, stackA, stackB);
          break;
       case NP_DIV:
-         calcFuncDiv(b);
+         calcFuncDiv(b, stackA, stackB);
          break;
       case NP_DEC:
          b[7] |= SEGPART_7;
@@ -240,68 +249,68 @@ void clearBuffer(uint8_t *buf) {
    }
 }
 
-void stackInsert(uint8_t *buf) {
+void stackInsert(uint8_t *buf, int64_t *stackA, int64_t *stackB) {
    int64_t currentNumber = parseDisplay(buf);
    if (stackA) {
-      stackB = stackA;
-      stackA = currentNumber;
+      *stackB = *stackA;
+      *stackA = currentNumber;
    } else {
-      stackA = currentNumber;
+      *stackA = currentNumber;
    }
    clearBuffer(buf);
 }
 
-void calcFuncAdd(uint8_t *buf) {
+void calcFuncAdd(uint8_t *buf, int64_t *stackA, int64_t *stackB) {
    int64_t res = 0;
    if(!buf[7]) {
-      res = stackB + stackA; 
-      stackB = 0;
-      stackA = res;
+      res = *stackB + *stackA; 
+      *stackB = 0;
+      *stackA = res;
    } else {
-      res = stackA + parseDisplay(buf);
-      stackA = res;
-   }
-   clearBuffer(buf);
-   putToBuffer(buf, res);
-}
-
-void calcFuncSub(uint8_t *buf) {
-   int64_t res = 0;
-   if(!buf[7]) {
-      res = stackB - stackA; 
-      stackB = 0;
-      stackA = res;
-   } else {
-      res = stackA - parseDisplay(buf);
-      stackA = res;
+      res = *stackA + parseDisplay(buf);
+      *stackA = res;
    }
    clearBuffer(buf);
    putToBuffer(buf, res);
 }
 
-void calcFuncMul(uint8_t *buf) {
+void calcFuncSub(uint8_t *buf, int64_t *stackA, int64_t *stackB) {
    int64_t res = 0;
    if(!buf[7]) {
-      res = stackB * stackA; 
-      stackB = 0;
-      stackA = res;
+      res = *stackB - *stackA; 
+      *stackB = 0;
+      *stackA = res;
    } else {
-      res = stackA * parseDisplay(buf);
-      stackA = res;
+      res = *stackA - parseDisplay(buf);
+      *stackA = res;
    }
    clearBuffer(buf);
    putToBuffer(buf, res);
 }
 
-void calcFuncDiv(uint8_t *buf) {
+void calcFuncMul(uint8_t *buf, int64_t *stackA, int64_t *stackB) {
    int64_t res = 0;
    if(!buf[7]) {
-      res = stackB / stackA; 
-      stackB = 0;
-      stackA = res;
+      res = *stackB * *stackA; 
+      *stackB = 0;
+      *stackA = res;
    } else {
-      res = stackA / parseDisplay(buf);
-      stackA = res;
+      res = *stackA * parseDisplay(buf);
+      *stackA = res;
+   }
+   clearBuffer(buf);
+   putToBuffer(buf, res);
+}
+
+void calcFuncDiv(uint8_t *buf, int64_t *stackA, int64_t *stackB) {
+   int64_t res = 0;
+   if(!buf[7]) {
+      res = *stackB / *stackA; 
+      *stackB = 0;
+      *stackA = res;
+   } else {
+      res = *stackA / parseDisplay(buf);
+      *stackA = res;
    }
    clearBuffer(buf);
    putToBuffer(buf, res);
