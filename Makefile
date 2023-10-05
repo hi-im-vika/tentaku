@@ -9,6 +9,10 @@ DEVINFO=-DF_CPU=$(CPUFREQ) -mmcu=$(MCU)
 
 BUILDDIR=./build
 SRCDIR=./src
+LIBDIR=./lib
+
+LIBSRC=$(wildcard $(LIBDIR)/*.c)
+LIBOBJ=$(LIBSRC:.c=.o)
 
 all:
 	@# make build folder if it doesn't exist already
@@ -17,3 +21,7 @@ all:
 	avr-gcc $(WARN) $(OPT) $(DEVINFO) -c $(SRCDIR)/main.c -o $(BUILDDIR)/main.o
 	avr-gcc $(WARN) $(DEVINFO) -o $(BUILDDIR)/main.elf $(BUILDDIR)/main.o
 	avr-objcopy -O ihex $(BUILDDIR)/main.elf $(BUILDDIR)/main.hex
+
+lib: $(LIBOBJ)
+	@mkdir -p ./build
+	avr-gcc $(WARN) $(OPT) $(DEVINFO) -c $^ -o $@
