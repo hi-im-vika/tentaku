@@ -16,10 +16,10 @@ void parseInput(uint32_t keys, uint8_t *b, uint8_t *altMode, int64_t *stackA, in
          break;
       case NP_1:
          // show contents of stackA
-         if (altMode) {
+         if (*altMode) {
             clearBuffer(b);
             putToBuffer(b, *stackA);
-            altMode = 0;
+            *altMode = 0;
             break;
          }
          isNumber = 1;
@@ -27,10 +27,10 @@ void parseInput(uint32_t keys, uint8_t *b, uint8_t *altMode, int64_t *stackA, in
          break;
       case NP_2:
          // show contents of stackB
-         if (altMode) {
+         if (*altMode) {
             clearBuffer(b);
             putToBuffer(b, *stackB);
-            altMode = 0;
+            *altMode = 0;
             break;
          }
          isNumber = 1;
