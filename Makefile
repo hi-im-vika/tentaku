@@ -25,3 +25,12 @@ all:
 lib: $(LIBOBJ)
 	@mkdir -p ./build
 	avr-gcc $(WARN) $(OPT) $(DEVINFO) -c $^ -o $@
+
+# makefile not yet updated to compile all files
+# avr-gcc -Wall -Os -DF_CPU=8000000 -mmcu=atmega328p -c ./src/main.c -o ./build/main.o
+# avr-gcc -Wall -Os -DF_CPU=8000000 -mmcu=atmega328p -c ./lib/stack.c -o ./build/stack.o
+# avr-gcc -Wall -Os -DF_CPU=8000000 -mmcu=atmega328p -c ./lib/util.c -o ./build/util.o
+# avr-gcc -Wall -Os -DF_CPU=8000000 -mmcu=atmega328p -c ./lib/spi.c -o ./build/spi.o
+# avr-gcc -Wall -Os -DF_CPU=8000000 -mmcu=atmega328p -c ./lib/buffer.c -o ./build/buffer.o
+# avr-gcc -Wall -DF_CPU=8000000 -mmcu=atmega328p -o ./build/main.elf ./build/*.o
+# avr-objcopy -O ihex ./build/main.elf ./build/main.hex
