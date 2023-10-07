@@ -6,6 +6,11 @@ void putToBuffer(uint8_t *buf, int64_t i) {
       buf[0] |= SEGPART_6;
       i *= -1;
    }
+   if (i > 9999999) {
+      buf[3] = 0b01011100;
+      buf[4] = 0b00111000;
+      return;
+   }
    for (int seg = 7; seg >= 1; seg--) {
       buf[seg] = numToSeg(numberAtPos(i,7 - seg));
    }
