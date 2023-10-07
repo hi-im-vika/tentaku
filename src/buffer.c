@@ -2,9 +2,12 @@
 
 // takes a number i and puts it onto the buffer
 void putToBuffer(uint8_t *buf, int64_t i) {
-   for (int seg = 7; seg > 0; seg--) {
+   for (int seg = 7; seg >= 1; seg--) {
       buf[seg] = numToSeg(numberAtPos(i,7 - seg));
    }
+
+   // go backwards through buffer and replace leading zeroes with blank
+   // exclude first zero
    for (int seg = 1; seg < 7; seg++) {
       if (buf[seg] == SEG_0) {
          buf[seg] = 0x00;
@@ -16,6 +19,7 @@ void putToBuffer(uint8_t *buf, int64_t i) {
 
 // clear display buffer
 void clearBuffer(uint8_t *buf) {
+   // fill all elements of buffer with zero
    for (int seg = 0; seg < 8; seg++) {
       buf[seg] = 0;
    }
