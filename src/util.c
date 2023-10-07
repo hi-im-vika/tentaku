@@ -83,8 +83,8 @@ void parseInput(uint32_t keys, uint8_t *b, uint8_t *altMode, int64_t *stackA, in
       case NP_SUB:
          // code for testing alternate key mode
          if (*altMode) {
-            clearBuffer(b);
-            altMode = 0;
+            b[0] ^= SEGPART_6;
+            *altMode = 0;
             break;
          }
          calcFuncSub(b, stackA, stackB);
@@ -203,6 +203,9 @@ int64_t parseDisplay(uint8_t *buf) {
       if (buf[seg] != 0x00) {
          temp += (segToNum(buf[seg]) * pot);
       }
+   }
+   if (buf[0] & SEGPART_6) {
+      temp *= -1;
    }
    return temp;
 }
