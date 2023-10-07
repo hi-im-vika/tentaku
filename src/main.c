@@ -17,11 +17,11 @@
 #include <util/delay.h>
 
 #include "main.h"
-#include "../lib/calcfunc.h"
-#include "../lib/buffer.h"
-#include "../lib/util.h"
-#include "../lib/stack.h"
-#include "../lib/spi.h"
+#include "calcfunc.h"
+#include "buffer.h"
+#include "util.h"
+#include "stack.h"
+#include "spi.h"
 
 // function prototypes
 void setup();
