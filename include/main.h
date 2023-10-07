@@ -5,6 +5,20 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>       // duh lol
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+
+#include "calcfunc.h"
+#include "buffer.h"
+#include "util.h"
+#include "stack.h"
+#include "spi.h"
+
 #define NP_0 0x00000004
 #define NP_1 0x00200000
 #define NP_2 0x02000000

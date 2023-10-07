@@ -8,20 +8,7 @@
 // SPI: PCH GRN VIO BRN BLK RED
 // vika
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <math.h>       // duh lol
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
-
 #include "main.h"
-#include "calcfunc.h"
-#include "buffer.h"
-#include "util.h"
-#include "stack.h"
-#include "spi.h"
 
 // function prototypes
 void setup();
