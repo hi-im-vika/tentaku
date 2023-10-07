@@ -68,7 +68,7 @@ void parseInput(uint32_t keys, uint8_t *b, uint8_t *altMode, int64_t *stackA, in
          stackInsert(b, stackA, stackB);
          break;
       case NP_NUM:
-         altMode = altMode ? 0 : altMode;
+         *altMode = *altMode ? 0 : *altMode;
          if (b[7]) {
             clearBuffer(b);
          } else {
@@ -82,7 +82,7 @@ void parseInput(uint32_t keys, uint8_t *b, uint8_t *altMode, int64_t *stackA, in
          break;
       case NP_SUB:
          // code for testing alternate key mode
-         if (altMode) {
+         if (*altMode) {
             clearBuffer(b);
             altMode = 0;
             break;
