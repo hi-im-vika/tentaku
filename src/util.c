@@ -189,11 +189,19 @@ uint8_t numToSeg(int n) {
 }
 
 // takes the display buffer and converts its contents into a single number
+// using pow() here does weird things
 int64_t parseDisplay(uint8_t *buf) {
    int64_t temp = 0;
-   for (int seg = 7; seg > 1; seg--) {
+   for (int seg = 7; seg > 0; seg--) {
+
+      // generate power of 10
+      int64_t pot = 1;
+      for (int ex = 0; ex < (7 - seg); ex++) {
+         pot *= 10;
+      }
+
       if (buf[seg] != 0x00) {
-         temp += segToNum(buf[seg]) * pow(10, 7 - seg);
+         temp += (segToNum(buf[seg]) * pot);
       }
    }
    return temp;
@@ -202,11 +210,13 @@ int64_t parseDisplay(uint8_t *buf) {
 // returns the number at the specified place value
 int numberAtPos(int64_t number, int pos) {
    int64_t temp = 0;
-   int64_t mulBy = 1;
+   // generate power of 10
+   int64_t pot = 1;
    for (int ex = 0; ex < pos; ex++) {
-      mulBy *= 10;
+      pot *= 10;
    }
-   temp = number % (mulBy * 10);
-   temp /= mulBy;
+
+   temp = number % (pot * 10);
+   temp /= pot;
    return (int) temp;
 }

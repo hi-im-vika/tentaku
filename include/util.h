@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include <stdint.h>
+#include <math.h>
 #include "consts.h"
 #include "calcfunc.h"
 #include "stack.h"
