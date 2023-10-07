@@ -102,7 +102,7 @@ void parseInput(uint32_t keys, uint8_t *b, uint8_t *altMode, int64_t *stackA, in
          b[7] = b[7];
          break;
    }
-   if (isNumber) {
+   if (isNumber && !b[1]) {
       for (int n = 1; n < 7; n++) {
          b[n] = b[n+1];
       }
