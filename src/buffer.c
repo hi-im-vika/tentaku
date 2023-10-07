@@ -2,6 +2,10 @@
 
 // takes a number i and puts it onto the buffer
 void putToBuffer(uint8_t *buf, int64_t i) {
+   if (i < 0) {
+      buf[0] |= 0b01000000;
+      i *= -1;
+   }
    for (int seg = 7; seg >= 1; seg--) {
       buf[seg] = numToSeg(numberAtPos(i,7 - seg));
    }
